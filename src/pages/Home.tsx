@@ -1,0 +1,318 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { BottomNav } from '../components/BottomNav';
+import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { HOME_TOOLS, STORAGE_KEYS } from '../constants';
+import { microGestures } from '../data/microGestures';
+
+export function Home() {
+  const navigate = useNavigate();
+  const { points, checkinCompleted, microGestureCompleted, completeMicroGesture, weeklyHistory, updateWeeklyProgress, getCoupleStatus } = useData();
+  const { user } = useAuth();
+
+  // Calculate Gesture of the Day
+  const gestureOfTheDay = useMemo(() => {
+    const today = new Date();
+    // Get day of year
+    const start = new Date(today.getFullYear(), 0, 0);
+    const diff = today.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    
+    const index = dayOfYear % microGestures.length;
+    return microGestures[index];
+  }, []);
+
+  useEffect(() => {
+    const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
+    if (!onboardingCompleted) {
+      navigate('/onboarding');
+    }
+
+    // Prototype update: If user is the old default, update to Thais e Bruno
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      if (userData.name === 'Usuário' || !userData.photoUrl) {
+        const updatedUser = {
+          ...userData,
+          name: 'Thais e Bruno',
+          photoUrl: 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=2070&auto=format&fit=crop'
+        };
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+        window.location.reload();
+      }
+    }
+  }, [navigate]);
+
+  // Get status from centralized logic
+  const { label: statusLabel, color: statusColor, percentage: connectionPercentage } = getCoupleStatus();
+  
+  // Update weekly progress in real-time
+  useEffect(() => {
+    updateWeeklyProgress(connectionPercentage);
+  }, [connectionPercentage, updateWeeklyProgress]);
+
+  // Check for profile completion
+  const userProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+  const isIncomplete = !userProfile.ourStory || !userProfile.emojiLanguage || !userProfile.limits?.respect;
+
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    if (!weeklyHistory || weeklyHistory.length === 0) {
+      // Return some mock data if history is empty
+      return [
+        { name: 'Sem 1', pct: 40 },
+        { name: 'Sem 2', pct: 60 },
+        { name: 'Sem 3', pct: 55 },
+        { name: 'Sem 4', pct: 80 },
+        { name: 'Atual', pct: connectionPercentage },
+      ];
+    }
+    
+    // Take the last 4 weeks of history + current week
+    const recentHistory = weeklyHistory.slice(-4);
+    const data = recentHistory.map((entry, index) => {
+      const date = new Date(entry.weekStarting);
+      return {
+        name: `${date.getDate()}/${date.getMonth() + 1}`,
+        pct: entry.percentage
+      };
+    });
+    
+    data.push({ name: 'Atual', pct: connectionPercentage });
+    return data;
+  }, [weeklyHistory, connectionPercentage]);
+
+  const imageUrl = 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop';
+
+  return (
+    <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">
+      <div className="w-full max-w-6xl mx-auto px-4 md:px-8">
+        <header className="flex items-center py-6 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10 border-b border-primary/5">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="size-12 md:size-14 rounded-full border-2 border-peach-main p-0.5 shadow-lg overflow-hidden">
+                <img 
+                  alt="Couple" 
+                  className="w-full h-full object-cover rounded-full" 
+                  src={user?.photoUrl || "https://images.unsplash.com/photo-1516589174184-c685266e430c?q=80&w=2070&auto=format&fit=crop"} 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[10px] text-white font-bold">favorite</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Bem-vindo de volta</p>
+              <h2 className="text-navy-main dark:text-slate-100 text-lg md:text-xl font-black leading-tight tracking-tight">
+                {user?.name || 'Usuário'}
+              </h2>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col items-end mr-2">
+              <span className="text-navy-main dark:text-slate-100 font-black text-sm">NaumDito</span>
+              <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Onde o silêncio encontra a voz</span>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => navigate('/notifications')}
+                className="flex size-10 md:size-12 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all relative"
+              >
+                <span className="material-symbols-outlined text-[24px] text-primary">notifications</span>
+                <span className="absolute top-2.5 right-2.5 size-2 bg-peach-main rounded-full border border-white dark:border-slate-800"></span>
+              </button>
+              <button 
+                onClick={() => navigate('/profile')}
+                className="flex size-10 md:size-12 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+              >
+                <span className="material-symbols-outlined text-[24px] text-slate-500">settings</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Profile Completion Warning */}
+        {isIncomplete && (
+          <div className="mt-6 p-5 rounded-[2rem] bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
+            <div className="flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-amber-100 dark:bg-amber-800/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <span className="material-symbols-outlined text-3xl">warning</span>
+              </div>
+              <div>
+                <h4 className="font-black text-amber-900 dark:text-amber-100 text-sm uppercase tracking-wider">Perfil Incompleto</h4>
+                <p className="text-amber-700 dark:text-amber-300 text-xs font-medium">Complete sua história e informações do casal para uma experiência personalizada.</p>
+              </div>
+            </div>
+            <Link 
+              to="/onboarding" 
+              className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-amber-500/20"
+            >
+              Completar Agora
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mt-4">
+          {/* Left Column: Connection Status & Micro-gesture */}
+          <div className="lg:col-span-7 space-y-6 md:space-y-8">
+            {/* Connection Barometer */}
+            <div className="bg-white dark:bg-slate-900/40 p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-primary/5">
+              <div className="flex gap-6 justify-between items-end mb-4">
+                <div className="relative group">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-emerald-main">Status do Casal</p>
+                    <span className="material-symbols-outlined text-slate-400 text-sm cursor-help">info</span>
+                    
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-0 mb-3 w-72 p-4 bg-navy-main text-white text-[11px] rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-20 leading-relaxed border border-white/10">
+                      <p className="font-bold mb-2 text-emerald-main">Como subir seu status:</p>
+                      <ul className="space-y-2">
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Complete o Check-in Diário (+20%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Realize o Micro-gesto do Dia (+5%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Cumpra combinados e permutas</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Mantenha a frequência de uso do app</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <p className={`text-2xl md:text-4xl font-black leading-tight tracking-tighter ${statusColor}`}>{statusLabel}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl md:text-5xl font-black leading-none text-primary">{connectionPercentage}%</p>
+                </div>
+              </div>
+              <div className="h-4 rounded-full bg-primary/10 overflow-hidden mb-4">
+                <div className="h-full rounded-full bg-gradient-to-r from-primary to-peach-main shadow-[0_0_10px_rgba(123,143,214,0.5)]" style={{ width: `${connectionPercentage}%` }}></div>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed mb-8">
+                {user ? `Olá, ${user.name}! ` : ''}Seu barômetro de conexão está <span className="text-navy-main dark:text-white font-bold">{connectionPercentage >= 60 ? 'excelente' : 'precisando de atenção'}</span> esta semana!
+              </p>
+
+              {/* Evolution Chart */}
+              <div className="mt-6 pt-6 border-t border-primary/5">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Evolução Semanal</h4>
+                <div className="h-40 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorPct" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} domain={[0, 100]} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                        itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
+                        formatter={(value: number) => [`${value}%`, 'Conexão']}
+                      />
+                      <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorPct)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Micro-gesture */}
+            <div className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm group">
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                <div className="h-48 md:h-full overflow-hidden">
+                  <img 
+                    src={imageUrl} 
+                    alt={gestureOfTheDay.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="p-6 md:p-8 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-bold text-peach-main bg-peach-main/10 px-2 py-1 rounded-full uppercase tracking-widest">Gesto do Dia</span>
+                  </div>
+                  <h3 className="text-navy-main dark:text-slate-100 text-xl md:text-2xl font-black leading-tight mb-3">{gestureOfTheDay.title}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base leading-relaxed mb-6">{gestureOfTheDay.description}</p>
+                  <button 
+                    onClick={completeMicroGesture}
+                    disabled={microGestureCompleted}
+                    className={`w-full md:w-fit flex items-center justify-center rounded-2xl h-14 px-8 text-white font-bold shadow-xl transition-all ${
+                      microGestureCompleted 
+                        ? 'bg-slate-400 cursor-not-allowed' 
+                        : 'bg-navy-main hover:bg-navy-main/90 active:scale-95 shadow-navy-main/20'
+                    }`}
+                  >
+                    {microGestureCompleted ? 'Gesto Concluído!' : 'Marcar como Feito'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Tools & Check-in */}
+          <div className="lg:col-span-5 space-y-6 md:space-y-8">
+            {/* Tools Grid */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center ml-2">
+                <h3 className="text-navy-main dark:text-slate-100 text-lg font-bold uppercase tracking-widest opacity-50">Ferramentas</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {HOME_TOOLS.map((tool) => (
+                  <Link 
+                    key={tool.to}
+                    to={tool.to} 
+                    className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-white dark:bg-slate-900/40 shadow-sm border border-slate-100 dark:border-slate-800 text-center gap-3 hover:shadow-md hover:border-primary/20 transition-all group"
+                  >
+                    <div className={`size-14 rounded-2xl flex items-center justify-center ${tool.color} group-hover:scale-110 transition-transform`}>
+                      <span className="material-symbols-outlined text-[32px]">{tool.icon}</span>
+                    </div>
+                    <span className="text-slate-800 dark:text-slate-200 text-xs font-bold uppercase tracking-widest">{tool.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Daily Check-in Card */}
+            <div className={`rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-2xl transition-all relative overflow-hidden ${
+              checkinCompleted 
+                ? 'bg-peach-500' 
+                : 'bg-gradient-to-br from-primary to-primary-light'
+            }`}>
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <span className="material-symbols-outlined text-[120px]">assessment</span>
+              </div>
+              
+              <div className="relative z-10 flex-1 text-center md:text-left mb-6 md:mb-0">
+                <h4 className="font-black text-2xl md:text-3xl mb-2 text-white tracking-tighter">
+                  {checkinCompleted ? 'Check-in Realizado!' : 'Check-in Diário'}
+                </h4>
+                <p className="text-white/90 text-sm md:text-base max-w-xs">
+                  {checkinCompleted 
+                    ? 'Parabéns por manter a conexão em dia!' 
+                    : 'Ainda não avaliaram o dia. Vamos conversar?'}
+                </p>
+              </div>
+              
+              <Link 
+                to="/checkin" 
+                className={`relative z-10 px-8 py-4 rounded-2xl font-bold text-base shadow-xl transition-all ${
+                  checkinCompleted 
+                    ? 'bg-white/20 text-white cursor-default' 
+                    : 'bg-white text-primary hover:scale-105 active:scale-95'
+                }`}
+                onClick={(e) => checkinCompleted && e.preventDefault()}
+              >
+                {checkinCompleted ? 'Ver Resumo' : 'Começar Agora'}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+}
