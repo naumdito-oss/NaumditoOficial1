@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -8,6 +8,7 @@ import { BottomNav } from '../components/BottomNav';
 // Contexts
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 // Constants & Data
 import { HOME_TOOLS, STORAGE_KEYS } from '../constants';
@@ -33,11 +34,15 @@ export function Home() {
     getCoupleStatus 
   } = useData();
 
+  const [dbGesture, setDbGesture] = useState<any>(null);
+
   /**
    * Calculates the "Gesture of the Day" based on the current day of the year.
    * This ensures the gesture changes daily and cycles through the available list.
    */
   const gestureOfTheDay = useMemo(() => {
+    if (dbGesture) return dbGesture;
+    
     const today = new Date();
     const start = new Date(today.getFullYear(), 0, 0);
     const diff = today.getTime() - start.getTime();
@@ -46,6 +51,52 @@ export function Home() {
     
     const index = dayOfYear % microGestures.length;
     return microGestures[index];
+  }, [dbGesture]);
+
+  // Fetch gesture from database
+  useEffect(() => {
+    const fetchGesture = async () => {
+      try {
+        const today = new Date();
+        const start = new Date(today.getFullYear(), 0, 0);
+        const diff = today.getTime() - start.getTime();
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+        
+        // We assume there are 50 gestures in the DB, or we get the count
+        const { count, error: countError } = await supabase
+          .from('micro_gestures')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) throw countError;
+        
+        if (count && count > 0) {
+          const index = dayOfYear % count;
+          
+          const { data, error } = await supabase
+            .from('micro_gestures')
+            .select('*')
+            .order('id', { ascending: true })
+            .range(index, index)
+            .single();
+            
+          if (error) throw error;
+          if (data) {
+            setDbGesture({
+              id: data.id,
+              title: data.title,
+              description: data.description,
+              imagePrompt: data.image_prompt,
+              imageUrl: data.image_url
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching gesture from DB:', err);
+      }
+    };
+    
+    fetchGesture();
   }, []);
 
   // Onboarding and User Profile Checks

@@ -33,6 +33,7 @@ import { Settings } from './pages/Settings';
 import { Privacy } from './pages/Privacy';
 import { EmpathyBox } from './pages/EmpathyBox';
 import { SaiaDaRotina } from './pages/SaiaDaRotina';
+import { AdminGestures } from './pages/AdminGestures';
 
 /**
  * Main application component that sets up routing and global providers.
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/empathy-box" element={<EmpathyBox />} />
             <Route path="/next-date" element={<SaiaDaRotina />} />
+            <Route path="/admin-gestures" element={<AdminGestures />} />
           </Routes>
         </BrowserRouter>
       </DataProvider>
