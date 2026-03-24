@@ -179,6 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Register the user
+    console.log("Attempting to sign up with:", { email, name });
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -190,7 +191,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error("Supabase Auth Error:", authError);
+      throw authError;
+    }
+    console.log("Sign up successful:", authData);
 
     // Se a sessão for nula após o registro, significa que a confirmação de e-mail está ativada no Supabase.
     if (!authData.session && !authData.user) {
