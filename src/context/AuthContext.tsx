@@ -193,8 +193,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (authError) throw authError;
 
     // Se a sessão for nula após o registro, significa que a confirmação de e-mail está ativada no Supabase.
-    if (!authData.session) {
+    if (!authData.session && !authData.user) {
       throw new Error('Confirmação de e-mail ativada. Por favor, vá no Supabase > Authentication > Providers > Email e DESATIVE "Confirm email" para testar mais facilmente, ou verifique sua caixa de entrada.');
+    }
+
+    // Ensure profile exists (Supabase usually handles this via trigger, but let's be safe)
+    if (authData.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({ 
+          id: authData.user.id, 
+          name, 
+          email 
+        });
+      
+      if (profileError) {
+        console.error("Erro ao criar perfil:", profileError);
+        throw new Error('Erro ao criar perfil do usuário.');
+      }
     }
 
     // If no partner code, create a new couple
