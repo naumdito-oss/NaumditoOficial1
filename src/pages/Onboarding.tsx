@@ -7,10 +7,17 @@ import { supabase } from '../lib/supabase';
 /**
  * Type definition for the onboarding data collected during the flow.
  */
+export type SpecialDate = {
+  id: string;
+  label: string;
+  date: string;
+};
+
 export type OnboardingData = {
   name: string;
   gender: string;
   birthDate: string;
+  anniversaryDate: string;
   partnerName: string;
   photoUrl: string;
   goals: string[];
@@ -19,6 +26,7 @@ export type OnboardingData = {
   travelStyle: string[];
   loveLanguages: string[];
   ourStory: string;
+  specialDates: SpecialDate[];
   limits: {
     respect: string;
     triggers: string;
@@ -30,6 +38,7 @@ const INITIAL_DATA: OnboardingData = {
   name: '',
   gender: '',
   birthDate: '',
+  anniversaryDate: '',
   partnerName: '',
   photoUrl: '',
   goals: [],
@@ -38,6 +47,7 @@ const INITIAL_DATA: OnboardingData = {
   travelStyle: [],
   loveLanguages: [],
   ourStory: '',
+  specialDates: [],
   limits: {
     respect: '',
     triggers: '',
@@ -133,6 +143,14 @@ export const Onboarding: React.FC = () => {
           .from('profiles')
           .update(updateData)
           .eq('id', user.id);
+
+        // Update anniversary date in couples table if provided
+        if (data.anniversaryDate && user.coupleId) {
+          await supabase
+            .from('couples')
+            .update({ anniversary_date: data.anniversaryDate })
+            .eq('id', user.coupleId);
+        }
 
         // Upload photo if selected
         if (selectedFile) {
@@ -239,6 +257,18 @@ export const Onboarding: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2 relative group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Data do Aniversário de Namoro</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={data.anniversaryDate}
+                  onChange={(e) => setData({ ...data, anniversaryDate: e.target.value })}
+                  className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
+                />
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+              </div>
+            </div>
+            <div className="space-y-2 relative group">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Nome do Parceiro(a)</label>
               <div className="relative">
                 <input
@@ -255,7 +285,78 @@ export const Onboarding: React.FC = () => {
         </div>
       ),
     },
-    // Step 1: Goals
+    // Step 1: Special Dates
+    {
+      title: 'Datas Especiais',
+      subtitle: 'Momentos que marcaram a história de vocês.',
+      content: (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            {data.specialDates.map((specialDate, index) => (
+              <div key={specialDate.id} className="p-4 bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-white/10 flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-peach-main">Evento #{index + 1}</span>
+                  <button 
+                    onClick={() => {
+                      const specialDates = data.specialDates.filter(d => d.id !== specialDate.id);
+                      setData({ ...data, specialDates });
+                    }}
+                    className="text-red-500 hover:text-red-600 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-xl">delete</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">O que aconteceu?</label>
+                    <input
+                      type="text"
+                      value={specialDate.label}
+                      onChange={(e) => {
+                        const specialDates = [...data.specialDates];
+                        specialDates[index].label = e.target.value;
+                        setData({ ...data, specialDates });
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-peach-main outline-none font-bold text-sm"
+                      placeholder="Ex: Primeiro Beijo"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Quando?</label>
+                    <input
+                      type="date"
+                      value={specialDate.date}
+                      onChange={(e) => {
+                        const specialDates = [...data.specialDates];
+                        specialDates[index].date = e.target.value;
+                        setData({ ...data, specialDates });
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-peach-main outline-none font-bold text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              const newDate: SpecialDate = {
+                id: Math.random().toString(36).substr(2, 9),
+                label: '',
+                date: new Date().toISOString().split('T')[0]
+              };
+              setData({ ...data, specialDates: [...data.specialDates, newDate] });
+            }}
+            className="w-full p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 text-slate-400 hover:text-peach-main hover:border-peach-main transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
+          >
+            <span className="material-symbols-outlined">add</span>
+            Adicionar Nova Data Especial
+          </button>
+        </div>
+      )
+    },
+    // Step 2: Goals
     {
       title: 'O que você busca?',
       subtitle: 'Selecione seus principais objetivos com o NaumDito.',

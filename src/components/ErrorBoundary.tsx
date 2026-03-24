@@ -1,7 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
 
 interface Props {
-  children?: ReactNode;
+  children?: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
 interface State {
@@ -9,40 +10,43 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null
-  };
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
   }
 
   public render() {
     if (this.state.hasError) {
-      return (
+      return this.props.fallback || (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="size-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <span className="material-symbols-outlined text-3xl">error</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">Ops, algo deu errado</h1>
-            <p className="text-slate-600 mb-6">
-              Ocorreu um erro inesperado. Por favor, tente recarregar a página ou voltar para o início.
+            <h1 className="text-2xl font-black text-slate-900 mb-2">Ops! Algo deu errado</h1>
+            <p className="text-slate-600 mb-8">
+              Ocorreu um erro inesperado. Tente recarregar a página ou limpar os dados.
             </p>
             <div className="space-y-3">
-              <button
+              <button 
                 onClick={() => window.location.reload()}
                 className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors"
               >
                 Recarregar Página
               </button>
-              <button
+              <button 
                 onClick={() => {
                   localStorage.clear();
                   window.location.href = '/';

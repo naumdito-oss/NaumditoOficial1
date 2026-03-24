@@ -33,7 +33,7 @@ export interface ExchangeItem {
   title: string;
   description: string;
   type: 'romantico' | 'divertido' | 'picante' | 'ajuda';
-  status: 'pending' | 'counter_proposed' | 'accepted' | 'completed';
+  status: 'pending' | 'counter_proposed' | 'accepted' | 'completed' | 'rejected';
   createdAt: string;
   authorName?: string;
   counterOffer?: string;

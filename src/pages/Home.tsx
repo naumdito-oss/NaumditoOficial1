@@ -9,6 +9,7 @@ import { BottomNav } from '../components/BottomNav';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { notificationService } from '../services/notificationService';
 
 // Constants & Data
 import { HOME_TOOLS, STORAGE_KEYS } from '../constants';
@@ -35,6 +36,8 @@ export function Home() {
   } = useData();
 
   const [dbGesture, setDbGesture] = useState<any>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [partnerProfile, setPartnerProfile] = useState<any>(null);
 
   /**
    * Calculates the "Gesture of the Day" based on the current day of the year.
@@ -53,7 +56,7 @@ export function Home() {
     return microGestures[index];
   }, [dbGesture]);
 
-  // Fetch gesture from database
+  // Fetch gesture and notifications
   useEffect(() => {
     const fetchGesture = async () => {
       try {
@@ -96,8 +99,45 @@ export function Home() {
       }
     };
     
+    const fetchUnreadCount = async () => {
+      if (user?.id) {
+        const { count, error } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('unread', true);
+        
+        if (!error && count !== null) {
+          setUnreadCount(count);
+        }
+      }
+    };
+
+    const fetchPartner = async () => {
+      if (user?.id && user?.coupleId) {
+        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+        if (partnerId) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('name, photo_url')
+            .eq('id', partnerId)
+            .single();
+          setPartnerProfile(data);
+        }
+      }
+    };
+
+    const checkEvents = async () => {
+      if (user?.id && user?.coupleId) {
+        await notificationService.checkAndGenerateEventNotifications(user.id, user.coupleId);
+        fetchUnreadCount();
+      }
+    };
+    
     fetchGesture();
-  }, []);
+    fetchPartner();
+    checkEvents();
+  }, [user]);
 
   // Onboarding and User Profile Checks
   useEffect(() => {
@@ -179,16 +219,24 @@ export function Home() {
         {/* Header Section */}
         <header className="flex items-center py-6 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10 border-b border-primary/5">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="size-12 md:size-14 rounded-full border-2 border-peach-main p-0.5 shadow-lg overflow-hidden">
+            <div className="relative flex items-center">
+              <div className="size-12 md:size-14 rounded-full border-2 border-white dark:border-slate-900 p-0.5 shadow-lg overflow-hidden z-20">
                 <img 
-                  alt="Couple" 
+                  alt="You" 
                   className="w-full h-full object-cover rounded-full" 
                   src={user?.photoUrl || "https://images.unsplash.com/photo-1516589174184-c685266e430c?q=80&w=2070&auto=format&fit=crop"} 
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+              <div className="size-12 md:size-14 rounded-full border-2 border-white dark:border-slate-900 p-0.5 shadow-lg overflow-hidden -ml-4 z-10">
+                <img 
+                  alt="Partner" 
+                  className="w-full h-full object-cover rounded-full" 
+                  src={partnerProfile?.photo_url || "https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop"} 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center z-30">
                 <span className="material-symbols-outlined text-[10px] text-white font-bold">favorite</span>
               </div>
             </div>
@@ -211,7 +259,11 @@ export function Home() {
                 className="flex size-10 md:size-12 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all relative"
               >
                 <span className="material-symbols-outlined text-[24px] text-primary">notifications</span>
-                <span className="absolute top-2.5 right-2.5 size-2 bg-peach-main rounded-full border border-white dark:border-slate-800"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-white font-black">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
               <button 
                 onClick={() => navigate('/profile')}

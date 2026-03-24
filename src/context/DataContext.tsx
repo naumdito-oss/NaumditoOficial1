@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
+import { notificationService } from '../services/notificationService';
 import { STORAGE_KEYS } from '../constants';
 import {
   Agreement,
@@ -356,7 +357,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setAgreements(agreements.filter(a => a.id !== id));
   };
 
-  const addExchange = (exchange: Omit<ExchangeItem, 'id' | 'createdAt' | 'status'>) => {
+  const addExchange = async (exchange: Omit<ExchangeItem, 'id' | 'createdAt' | 'status'>) => {
     const newExchange: ExchangeItem = {
       ...exchange,
       id: Date.now().toString(),
@@ -365,27 +366,62 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
     setExchanges([newExchange, ...exchanges]);
     
-    window.dispatchEvent(new CustomEvent('new_notification', { 
-      detail: { title: 'Nova Permuta', message: `${exchange.authorName || 'Seu par'} propôs uma nova permuta: ${exchange.title}` }
-    }));
+    // Notify partner
+    if (user?.id && user?.coupleId) {
+      const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+      if (partnerId) {
+        await notificationService.createNotification({
+          user_id: partnerId,
+          type: 'exchange',
+          title: 'Nova Permuta',
+          description: `${exchange.authorName || 'Seu par'} propôs uma nova permuta: ${exchange.title}`,
+          icon: 'swap_horiz',
+          color: 'bg-indigo-500',
+          link: '/agreements'
+        });
+      }
+    }
   };
 
-  const updateExchange = (id: string, updates: Partial<ExchangeItem>) => {
+  const updateExchange = async (id: string, updates: Partial<ExchangeItem>) => {
     setExchanges(exchanges.map(e => {
       if (e.id === id) {
         const updated = { ...e, ...updates };
         
-        if (updates.status === 'counter_proposed') {
-          window.dispatchEvent(new CustomEvent('new_notification', { 
-            detail: { title: 'Contraproposta Recebida', message: `Seu par fez uma contraproposta para: ${e.title}` }
-          }));
+        // Notify partner of status change
+        if (user?.id && user?.coupleId) {
+          notificationService.getPartnerId(user.id, user.coupleId).then(partnerId => {
+            if (partnerId) {
+              let title = '';
+              let message = '';
+              
+              if (updates.status === 'counter_proposed') {
+                title = 'Contraproposta Recebida';
+                message = `Seu par fez uma contraproposta para: ${e.title}`;
+              } else if (updates.status === 'accepted') {
+                title = 'Permuta Aceita!';
+                message = `O acordo foi fechado: ${e.title}`;
+              } else if (updates.status === 'rejected') {
+                title = 'Permuta Recusada';
+                message = `Seu par recusou a permuta: ${e.title}`;
+              }
+
+              if (title) {
+                notificationService.createNotification({
+                  user_id: partnerId,
+                  type: 'exchange',
+                  title,
+                  description: message,
+                  icon: 'swap_horiz',
+                  color: 'bg-indigo-500',
+                  link: '/agreements'
+                });
+              }
+            }
+          });
         }
         
         if (updates.status === 'accepted') {
-          window.dispatchEvent(new CustomEvent('new_notification', { 
-            detail: { title: 'Permuta Aceita!', message: `O acordo foi fechado: ${e.title}` }
-          }));
-          
           const agreementText = `Acordo: ${e.title} ${updated.counterOffer ? `em troca de ${updated.counterOffer}` : ''}`;
           addAgreement(agreementText);
         }
@@ -400,7 +436,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setExchanges(exchanges.filter(e => e.id !== id));
   };
 
-  const addToWishlist = (link: string) => {
+  const addToWishlist = async (link: string) => {
     const newItem: WishlistItem = {
       id: Date.now().toString(),
       link,
@@ -408,6 +444,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString()
     };
     setWishlist([newItem, ...wishlist]);
+
+    // Notify partner
+    if (user?.id && user?.coupleId) {
+      const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+      if (partnerId) {
+        await notificationService.createNotification({
+          user_id: partnerId,
+          type: 'wishlist',
+          title: 'Novo Item na Wishlist',
+          description: `Seu par adicionou um novo item à lista de desejos.`,
+          icon: 'card_giftcard',
+          color: 'bg-pink-500',
+          link: '/surprise'
+        });
+      }
+    }
   };
 
   const removeFromWishlist = (id: string) => {
@@ -462,7 +514,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  const completeCheckin = (feeling: string, tags: string[], note: string) => {
+  const completeCheckin = async (feeling: string, tags: string[], note: string) => {
     setCheckinCompleted(true);
     addPoints(50);
     
@@ -475,6 +527,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
     
     setCheckinHistory(prev => [newCheckin, ...prev]);
+
+    // Notify partner
+    if (user?.id && user?.coupleId) {
+      const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+      if (partnerId) {
+        await notificationService.createNotification({
+          user_id: partnerId,
+          type: 'checkin',
+          title: 'Check-in Realizado',
+          description: `Seu par acabou de realizar o check-in diário.`,
+          icon: 'favorite',
+          color: 'bg-red-500',
+          link: '/checkin'
+        });
+      }
+    }
   };
 
   const completeMicroGesture = () => {
