@@ -20,16 +20,21 @@ export function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect to home if already authenticated
+  // Redirect to home or onboarding if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/home');
+      const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
+      if (onboardingCompleted) {
+        navigate('/home');
+      } else {
+        navigate('/onboarding');
+      }
     }
   }, [isAuthenticated, navigate]);
 
   /**
    * Handles the login form submission.
-   * Authenticates the user and redirects to the home page on success.
+   * Authenticates the user and redirects to the home page or onboarding on success.
    * 
    * @param {React.FormEvent} e - The form submission event.
    */
@@ -40,7 +45,12 @@ export function Login() {
     
     try {
       await login(email, password);
-      navigate('/home');
+      const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
+      if (onboardingCompleted) {
+        navigate('/home');
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {

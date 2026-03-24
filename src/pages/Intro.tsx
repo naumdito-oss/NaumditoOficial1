@@ -49,11 +49,11 @@ const slides: IntroSlide[] = [
 
 export function Intro() {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true' || !!user?.profileData;
+    const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
     if (isAuthenticated) {
       if (onboardingCompleted) {
         navigate('/home');
@@ -61,7 +61,7 @@ export function Intro() {
         navigate('/onboarding');
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {

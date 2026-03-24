@@ -62,6 +62,13 @@ const INITIAL_DATA: OnboardingData = {
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const { user, updatePhoto } = useAuth();
+  
+  // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [currentStep, setCurrentStep] = useState(0);
