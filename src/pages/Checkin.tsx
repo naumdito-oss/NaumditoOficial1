@@ -1,15 +1,31 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Contexts
 import { useData } from '../context/DataContext';
+
+// Constants
 import { CHECKIN_FEELINGS, CHECKIN_TAGS } from '../constants';
 
+/**
+ * Checkin page component.
+ * Allows users to log their daily feelings and tags, and view a summary of their recent check-ins.
+ */
 export function Checkin() {
   const navigate = useNavigate();
   const { completeCheckin, checkinHistory } = useData();
+  
+  // Form state
   const [feeling, setFeeling] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [note, setNote] = useState('');
 
+  /**
+   * Calculates a weekly summary based on the user's check-in history.
+   * Analyzes the most frequent feeling and tags over the last 7 days.
+   * 
+   * @returns {Object|null} The summary object containing text, tips, icon, color, top tags, and count, or null if no history.
+   */
   const getWeeklySummary = () => {
     if (!checkinHistory || checkinHistory.length === 0) return null;
 
@@ -92,6 +108,10 @@ export function Checkin() {
 
   const summary = getWeeklySummary();
 
+  /**
+   * Handles saving the check-in data.
+   * Validates that a feeling is selected before completing the check-in.
+   */
   const handleSave = () => {
     if (!feeling) {
       alert("Por favor, selecione como você está se sentindo.");
@@ -103,6 +123,11 @@ export function Checkin() {
     navigate('/home');
   };
 
+  /**
+   * Toggles a tag in the selected tags list.
+   * 
+   * @param {string} tag - The tag to toggle.
+   */
   const toggleTag = (tag: string) => {
     if (tags.includes(tag)) {
       setTags(tags.filter(t => t !== tag));
@@ -185,7 +210,7 @@ export function Checkin() {
                   className="w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus:ring-2 focus:ring-peach-main/20 focus:border-peach-main p-6 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 text-base outline-none transition-all resize-none" 
                   placeholder="Escreva um pouco mais sobre o seu dia..." 
                   rows={6}
-                ></textarea>
+                />
 
                 <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-5 flex gap-4 mt-8 border border-primary/10">
                   <span className="material-symbols-outlined text-primary">info</span>

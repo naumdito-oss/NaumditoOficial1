@@ -1,21 +1,44 @@
+import React, { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+// Components
 import { BottomNav } from '../components/BottomNav';
+
+// Contexts
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+// Constants & Data
 import { HOME_TOOLS, STORAGE_KEYS } from '../constants';
 import { microGestures } from '../data/microGestures';
 
+/**
+ * Home Page Component
+ * 
+ * The main dashboard of the application. Displays the couple's connection status,
+ * weekly evolution chart, the micro-gesture of the day, and quick access to tools.
+ * 
+ * @returns {JSX.Element} The rendered Home page component.
+ */
 export function Home() {
   const navigate = useNavigate();
-  const { points, checkinCompleted, microGestureCompleted, completeMicroGesture, weeklyHistory, updateWeeklyProgress, getCoupleStatus } = useData();
   const { user } = useAuth();
+  const { 
+    checkinCompleted, 
+    microGestureCompleted, 
+    completeMicroGesture, 
+    weeklyHistory, 
+    updateWeeklyProgress, 
+    getCoupleStatus 
+  } = useData();
 
-  // Calculate Gesture of the Day
+  /**
+   * Calculates the "Gesture of the Day" based on the current day of the year.
+   * This ensures the gesture changes daily and cycles through the available list.
+   */
   const gestureOfTheDay = useMemo(() => {
     const today = new Date();
-    // Get day of year
     const start = new Date(today.getFullYear(), 0, 0);
     const diff = today.getTime() - start.getTime();
     const oneDay = 1000 * 60 * 60 * 24;
@@ -25,25 +48,11 @@ export function Home() {
     return microGestures[index];
   }, []);
 
+  // Onboarding and User Profile Checks
   useEffect(() => {
     const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
     if (!onboardingCompleted) {
       navigate('/onboarding');
-    }
-
-    // Prototype update: If user is the old default, update to Thais e Bruno
-    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      if (userData.name === 'Usuário' || !userData.photoUrl) {
-        const updatedUser = {
-          ...userData,
-          name: 'Thais e Bruno',
-          photoUrl: 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=2070&auto=format&fit=crop'
-        };
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
-        window.location.reload();
-      }
     }
   }, [navigate]);
 
@@ -56,10 +65,20 @@ export function Home() {
   }, [connectionPercentage, updateWeeklyProgress]);
 
   // Check for profile completion
-  const userProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
-  const isIncomplete = !userProfile.ourStory || !userProfile.emojiLanguage || !userProfile.limits?.respect;
+  const userProfile = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('user_profile');
+      return stored && stored !== 'undefined' && stored !== 'null' ? JSON.parse(stored) : {};
+    } catch (e) {
+      return {};
+    }
+  }, []);
+  const isIncomplete = !userProfile?.ourStory || !userProfile?.limits?.respect;
 
-  // Prepare chart data
+  /**
+   * Prepares the data for the weekly evolution chart.
+   * Uses the last 4 weeks of history plus the current week's percentage.
+   */
   const chartData = useMemo(() => {
     if (!weeklyHistory || weeklyHistory.length === 0) {
       // Return some mock data if history is empty
@@ -74,7 +93,7 @@ export function Home() {
     
     // Take the last 4 weeks of history + current week
     const recentHistory = weeklyHistory.slice(-4);
-    const data = recentHistory.map((entry, index) => {
+    const data = recentHistory.map((entry) => {
       const date = new Date(entry.weekStarting);
       return {
         name: `${date.getDate()}/${date.getMonth() + 1}`,
@@ -86,11 +105,13 @@ export function Home() {
     return data;
   }, [weeklyHistory, connectionPercentage]);
 
-  const imageUrl = 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop';
+  const fallbackImageUrl = 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop';
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">
       <div className="w-full max-w-6xl mx-auto px-4 md:px-8">
+        
+        {/* Header Section */}
         <header className="flex items-center py-6 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10 border-b border-primary/5">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -159,8 +180,10 @@ export function Home() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mt-4">
+          
           {/* Left Column: Connection Status & Micro-gesture */}
           <div className="lg:col-span-7 space-y-6 md:space-y-8">
+            
             {/* Connection Barometer */}
             <div className="bg-white dark:bg-slate-900/40 p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-primary/5">
               <div className="flex gap-6 justify-between items-end mb-4">
@@ -224,7 +247,7 @@ export function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div className="h-48 md:h-full overflow-hidden">
                   <img 
-                    src={imageUrl} 
+                    src={gestureOfTheDay.imageUrl || fallbackImageUrl} 
                     alt={gestureOfTheDay.title} 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     referrerPolicy="no-referrer"
@@ -254,6 +277,7 @@ export function Home() {
 
           {/* Right Column: Tools & Check-in */}
           <div className="lg:col-span-5 space-y-6 md:space-y-8">
+            
             {/* Tools Grid */}
             <div className="space-y-4">
               <div className="flex justify-between items-center ml-2">

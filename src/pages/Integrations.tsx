@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+
+// Components
 import { BottomNav } from '../components/BottomNav';
 
+// Types
 interface Integration {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ interface Integration {
   keyName: string;
 }
 
+// Constants
 const INTEGRATIONS: Integration[] = [
   {
     id: 'spotify',
@@ -47,6 +50,14 @@ const INTEGRATIONS: Integration[] = [
   }
 ];
 
+/**
+ * Integrations Page Component
+ * 
+ * Allows users to configure and manage third-party API integrations
+ * (e.g., Spotify, Google Calendar, WhatsApp).
+ * 
+ * @returns {JSX.Element} The rendered Integrations component.
+ */
 export function Integrations() {
   const navigate = useNavigate();
   const [keys, setKeys] = useState<Record<string, string>>({});
@@ -54,9 +65,13 @@ export function Integrations() {
   const [tempKey, setTempKey] = useState('');
 
   useEffect(() => {
-    const savedKeys = localStorage.getItem('naumdito_api_keys');
-    if (savedKeys) {
-      setKeys(JSON.parse(savedKeys));
+    try {
+      const savedKeys = localStorage.getItem('naumdito_api_keys');
+      if (savedKeys) {
+        setKeys(JSON.parse(savedKeys));
+      }
+    } catch (e) {
+      console.error('Error parsing api keys:', e);
     }
   }, []);
 

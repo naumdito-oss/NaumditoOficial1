@@ -1,29 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { motion } from 'motion/react';
 
+// Contexts
+import { useAuth } from '../context/AuthContext';
+
+/**
+ * Register Component
+ * 
+ * Handles new user registration, including partner code linking.
+ * If a user registers without a partner code, they are given a code to share.
+ * If they register with a partner code, they are linked immediately.
+ * 
+ * @returns {JSX.Element} The rendered Register page component.
+ */
 export function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { register } = useAuth();
+  
+  // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [partnerCode, setPartnerCode] = useState(searchParams.get('code') || '');
+  
+  // UI State
   const [isLoading, setIsLoading] = useState(false);
   const [registeredCode, setRegisteredCode] = useState('');
   const [error, setError] = useState('');
 
+  /**
+   * Handles the registration form submission.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    
     try {
-      const newUser = await register(name, email, partnerCode);
+      const newUser = await register(name, email, partnerCode, password);
+      
+      // If no partner code was provided, show the generated code to share
       if (!partnerCode && newUser?.coupleCode) {
         setRegisteredCode(newUser.coupleCode);
       } else {
+        // If linked successfully, proceed to onboarding
         navigate('/onboarding');
       }
     } catch (err: any) {
@@ -33,6 +57,7 @@ export function Register() {
     }
   };
 
+  // If registration is successful and a code needs to be shared
   if (registeredCode) {
     const shareUrl = `${window.location.origin}/register?code=${registeredCode}`;
     const shareText = `Oi! Criei nossa conta no NaumDito. Acesse o app e use o código ${registeredCode} para nos conectarmos! Link: ${shareUrl}`;
@@ -40,6 +65,7 @@ export function Register() {
 
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background-light dark:bg-background-dark transition-colors duration-300">
+        {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
             src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1920&auto=format&fit=crop" 
@@ -95,6 +121,7 @@ export function Register() {
     );
   }
 
+  // Default Registration Form
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background-light dark:bg-background-dark transition-colors duration-300">
       {/* Background Image with Overlay */}
@@ -221,3 +248,4 @@ export function Register() {
     </div>
   );
 }
+

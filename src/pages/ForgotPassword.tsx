@@ -1,6 +1,13 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
+/**
+ * Forgot Password Page Component
+ * 
+ * Allows users to request a password reset link by providing their email address.
+ * 
+ * @returns {JSX.Element} The rendered ForgotPassword component.
+ */
 export function ForgotPassword() {
   const navigate = useNavigate();
 

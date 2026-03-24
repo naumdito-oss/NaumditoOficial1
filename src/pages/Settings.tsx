@@ -1,20 +1,38 @@
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 
+/**
+ * Settings Page Component
+ * 
+ * Allows the user to configure app preferences such as dark mode,
+ * push notifications, and app sounds.
+ * 
+ * @returns {JSX.Element} The rendered Settings component.
+ */
 export function Settings() {
   const navigate = useNavigate();
+  
+  // Preferences State
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [sound, setSound] = useState(true);
 
-  // Initialize dark mode state based on document class
+  /**
+   * Initializes the dark mode state based on the document's class list
+   * on component mount.
+   */
   useEffect(() => {
     setDarkMode(document.documentElement.classList.contains('dark'));
   }, []);
 
+  /**
+   * Toggles the dark mode theme, updates the document class list,
+   * and persists the preference in local storage.
+   */
   const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
+    
     if (newMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -27,6 +45,8 @@ export function Settings() {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">
       <div className="w-full max-w-4xl mx-auto flex flex-col flex-1">
+        
+        {/* Header */}
         <header className="flex items-center p-4 md:p-8 sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10 border-b border-primary/10">
           <div onClick={() => navigate(-1)} className="flex size-10 md:size-12 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 cursor-pointer transition-colors">
             <span className="material-symbols-outlined text-navy-main dark:text-slate-100">arrow_back</span>
@@ -37,7 +57,10 @@ export function Settings() {
           </div>
         </header>
 
+        {/* Main Content */}
         <main className="flex-1 px-4 md:px-8 py-6 space-y-8">
+          
+          {/* Appearance Section */}
           <section className="bg-white dark:bg-slate-900/40 p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-primary/5">
             <h3 className="text-lg font-black text-navy-main dark:text-slate-100 tracking-tight mb-6">Aparência</h3>
             
@@ -60,10 +83,13 @@ export function Settings() {
             </div>
           </section>
 
+          {/* Preferences Section */}
           <section className="bg-white dark:bg-slate-900/40 p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-primary/5">
             <h3 className="text-lg font-black text-navy-main dark:text-slate-100 tracking-tight mb-6">Preferências</h3>
             
             <div className="space-y-4">
+              
+              {/* Push Notifications Toggle */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-4">
                   <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -82,6 +108,7 @@ export function Settings() {
                 </button>
               </div>
 
+              {/* App Sounds Toggle */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-4">
                   <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -99,6 +126,7 @@ export function Settings() {
                   <div className={`size-4 rounded-full bg-white transition-transform ${sound ? 'translate-x-6' : 'translate-x-0'}`}></div>
                 </button>
               </div>
+
             </div>
           </section>
         </main>

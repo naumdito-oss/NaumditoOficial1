@@ -1,8 +1,21 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BottomNav } from '../components/BottomNav';
-import { useData } from '../context/DataContext';
 import { motion } from 'motion/react';
 
+// Components
+import { BottomNav } from '../components/BottomNav';
+
+// Contexts
+import { useData } from '../context/DataContext';
+
+/**
+ * Points Page Component
+ * 
+ * Displays the user's total connection points, current level, progress to the next level,
+ * recent achievements, and available rewards for redemption.
+ * 
+ * @returns {JSX.Element} The rendered Points component.
+ */
 export function Points() {
   const navigate = useNavigate();
   const { points, level, redeemPoints } = useData();
@@ -13,6 +26,13 @@ export function Points() {
   const progressPercentage = (currentLevelPoints / pointsPerLevel) * 100;
   const pointsToNextLevel = pointsPerLevel - currentLevelPoints;
 
+  /**
+   * Handles the redemption of a reward.
+   * Prompts the user for confirmation and attempts to deduct the points.
+   * 
+   * @param {number} cost - The point cost of the reward.
+   * @param {string} rewardName - The name of the reward.
+   */
   const handleRedeem = (cost: number, rewardName: string) => {
     if (window.confirm(`Deseja resgatar "${rewardName}" por ${cost} pontos?`)) {
       if (redeemPoints(cost)) {

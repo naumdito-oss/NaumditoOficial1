@@ -1,35 +1,93 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { STORAGE_KEYS } from '../constants';
+import { supabase } from '../lib/supabase';
 
+/**
+ * Defines the shape of the authentication context.
+ */
 interface AuthContextType {
   user: User | null;
   login: (email: string, password?: string) => Promise<void>;
   logout: () => void;
-  register: (name: string, email: string, partnerCode?: string) => Promise<any>;
-  updatePhoto: (photoUrl: string) => void;
+  register: (name: string, email: string, partnerCode?: string, password?: string) => Promise<any>;
+  updatePhoto: (file: File) => void;
   isAuthenticated: boolean;
-  channel: any | null; // Removed RealtimeChannel type
+  channel: any | null;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Provider component that wraps the app and provides authentication state.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [channel, setChannel] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      connectSocket(parsedUser.coupleId);
-    }
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setChannel(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*, couples(couple_code)')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (profile) {
+        const loggedUser: User = {
+          email: profile.email,
+          name: profile.name,
+          coupleId: profile.couple_id,
+          points: profile.points || 0,
+          level: profile.level || 1,
+          photoUrl: profile.photo_url,
+          coupleCode: profile.couples?.couple_code,
+          id: profile.id
+        };
+        setUser(loggedUser);
+        connectSocket(loggedUser.coupleId);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Initializes a mock socket connection for real-time features.
+   * @param coupleId - The unique identifier for the couple.
+   */
   const connectSocket = (coupleId?: string) => {
-    // Mock socket connection since Supabase is removed
     if (coupleId) {
+      // We will replace this with Supabase Realtime later if needed
       const mockChannel = {
         on: () => mockChannel,
         subscribe: () => {},
@@ -39,126 +97,160 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * Generates a random 6-character alphanumeric code.
+   */
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
+  /**
+   * Authenticates a user with email and password.
+   */
   const login = async (email: string, password?: string) => {
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (email === 'naumdito@gmail.com' && password === '13042013') {
-          const code = generateCode();
-          const photoUrl = 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=800&auto=format&fit=crop';
-          
-          const loggedUser = { 
-            email, 
-            name: 'Admin NaumDito', 
-            coupleId: 'mock-couple-id', 
-            points: 0, 
-            level: 1, 
-            photoUrl,
-            coupleCode: code,
-            partnerName: null
-          };
-          
-          setUser(loggedUser);
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
-          connectSocket(loggedUser.coupleId);
-          resolve();
-        } else {
-          // Check if there's a registered user in local storage
-          const storedUsers = JSON.parse(localStorage.getItem('mock_users') || '[]');
-          const foundUser = storedUsers.find((u: any) => u.email === email);
-          
-          if (foundUser) {
-            setUser(foundUser);
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(foundUser));
-            connectSocket(foundUser.coupleId);
-            resolve();
-          } else {
-            reject(new Error('Credenciais inválidas ou usuário não encontrado.'));
-          }
-        }
-      }, 500);
+    if (!password) throw new Error('Password is required');
+    
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+
+    if (error) throw error;
   };
 
-  const register = async (name: string, email: string, partnerCode?: string) => {
-    return new Promise<any>((resolve, reject) => {
-      setTimeout(() => {
-        const storedUsers = JSON.parse(localStorage.getItem('mock_users') || '[]');
-        
-        if (storedUsers.some((u: any) => u.email === email)) {
-          reject(new Error('Usuário já existe com este e-mail.'));
-          return;
+  /**
+   * Registers a new user and optionally links them to a partner.
+   */
+  const register = async (name: string, email: string, partnerCode?: string, password?: string) => {
+    if (!password) throw new Error('Password is required');
+
+    let coupleId = null;
+
+    // If partner code is provided, verify it first
+    if (partnerCode) {
+      const { data: couple, error: coupleError } = await supabase
+        .from('couples')
+        .select('id')
+        .eq('couple_code', partnerCode)
+        .single();
+
+      if (coupleError || !couple) {
+        throw new Error('Código do parceiro inválido.');
+      }
+      coupleId = couple.id;
+    }
+
+    // Register the user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          photo_url: 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=2070&auto=format&fit=crop'
         }
-
-        let coupleId = 'mock-couple-id-' + Date.now();
-        let coupleCode = generateCode();
-        let partnerName = null;
-
-        if (partnerCode) {
-          const partner = storedUsers.find((u: any) => u.coupleCode === partnerCode);
-          if (partner) {
-            coupleId = partner.coupleId;
-            coupleCode = partner.coupleCode;
-            partnerName = partner.name;
-          } else {
-            reject(new Error('Código do parceiro inválido.'));
-            return;
-          }
-        }
-
-        const photoUrl = 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=2070&auto=format&fit=crop';
-        
-        const newUser = { 
-          email, 
-          name, 
-          coupleId, 
-          points: 0, 
-          level: 1, 
-          photoUrl,
-          coupleCode,
-          partnerName
-        };
-        
-        storedUsers.push(newUser);
-        localStorage.setItem('mock_users', JSON.stringify(storedUsers));
-        
-        setUser(newUser);
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-        connectSocket(newUser.coupleId);
-        resolve(newUser);
-      }, 500);
+      }
     });
+
+    if (authError) throw authError;
+
+    // Se a sessão for nula após o registro, significa que a confirmação de e-mail está ativada no Supabase.
+    if (!authData.session) {
+      throw new Error('Confirmação de e-mail ativada. Por favor, vá no Supabase > Authentication > Providers > Email e DESATIVE "Confirm email" para testar mais facilmente, ou verifique sua caixa de entrada.');
+    }
+
+    // If no partner code, create a new couple
+    if (!coupleId && authData.user) {
+      const { data: newCouple, error: newCoupleError } = await supabase
+        .from('couples')
+        .insert([{ couple_code: generateCode() }])
+        .select()
+        .single();
+
+      if (newCoupleError) {
+        console.error("Erro ao criar casal:", newCoupleError);
+        throw new Error('Erro ao criar o código do casal. Verifique as políticas do banco de dados (RLS).');
+      }
+      coupleId = newCouple.id;
+    }
+
+    // Update the profile with the couple_id
+    if (authData.user && coupleId) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ couple_id: coupleId })
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        console.error("Erro ao atualizar perfil:", profileError);
+        throw new Error('Erro ao vincular perfil ao casal.');
+      }
+    }
+
+    return authData.user;
   };
 
-  const logout = () => {
+  /**
+   * Logs out the current user and clears session data.
+   */
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem(STORAGE_KEYS.USER);
     setChannel(null);
   };
 
-  const updatePhoto = async (photoUrl: string) => {
-    if (user) {
-      const updatedUser = { ...user, photoUrl };
-      setUser(updatedUser);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
-      
-      const storedUsers = JSON.parse(localStorage.getItem('mock_users') || '[]');
-      const userIndex = storedUsers.findIndex((u: any) => u.email === user.email);
-      if (userIndex !== -1) {
-        storedUsers[userIndex] = updatedUser;
-        localStorage.setItem('mock_users', JSON.stringify(storedUsers));
+  /**
+   * Updates the user's profile photo.
+   */
+  const updatePhoto = async (file: File) => {
+    if (user && user.id) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // Upload image to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) {
+          console.error('Upload Error Details:', uploadError);
+          throw new Error(`Erro no upload: ${uploadError.message}`);
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        // Update profile with new URL
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ photo_url: publicUrl })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Profile Update Error Details:', updateError);
+          throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
+        }
+
+        setUser({ ...user, photoUrl: publicUrl });
+      } catch (error: any) {
+        console.error('Error updating photo:', error);
+        alert(error.message || 'Erro ao atualizar a foto. Tente novamente.');
       }
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, updatePhoto, isAuthenticated: !!user, channel }}>
-      {children}
+    <AuthContext.Provider value={{ user, login, logout, register, updatePhoto, isAuthenticated: !!user, channel, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
 
+/**
+ * Custom hook to access the authentication context.
+ */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 import { STORAGE_KEYS } from '../constants';
 import {
   Agreement,
@@ -11,6 +12,9 @@ import {
   NextDatePlan
 } from '../types';
 
+/**
+ * Defines the shape of the data context, including all application state and actions.
+ */
 interface DataContextType {
   points: number;
   level: number;
@@ -44,6 +48,9 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+/**
+ * Provider component that manages and supplies the application's core data state.
+ */
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [points, setPoints] = useState(1200);
@@ -77,43 +84,53 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyProgress[]>([]);
   const [checkinHistory, setCheckinHistory] = useState<CheckinHistoryItem[]>([]);
   const [currentWeekProgress, setCurrentWeekProgress] = useState(0);
+  const [weeklyPoints, setWeeklyPoints] = useState(() => {
+    const stored = localStorage.getItem('weekly_points');
+    const parsed = stored ? parseInt(stored, 10) : 150;
+    return isNaN(parsed) ? 150 : parsed;
+  });
+  const [dailyPoints, setDailyPoints] = useState(() => {
+    const stored = localStorage.getItem('daily_points');
+    const parsed = stored ? parseInt(stored, 10) : 0;
+    return isNaN(parsed) ? 0 : parsed;
+  });
+  const DAILY_POINTS_CAP = 100;
 
-  // Helper to get the start of the current day
+  /**
+   * Helper to get the start of the current day in ISO format.
+   */
   const getStartOfDay = () => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return now.toISOString();
   };
 
-  // Helper to get the start of the current week (Monday)
+  /**
+   * Helper to get the start of the current week (Monday) in ISO format.
+   */
   const getStartOfWeek = () => {
     const now = new Date();
     const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
     const startOfWeek = new Date(now.setDate(diff));
     startOfWeek.setHours(0, 0, 0, 0);
     return startOfWeek.toISOString();
   };
 
-  // Helper to check if it's the end of the week (Sunday 23:59)
-  // For prototype purposes, we'll check if the current week has changed
   useEffect(() => {
     const checkCycles = () => {
-      // Daily cycle check
       const storedStartOfDay = localStorage.getItem(STORAGE_KEYS.CURRENT_DAY_START);
       const currentStartOfDay = getStartOfDay();
 
       if (!storedStartOfDay) {
         localStorage.setItem(STORAGE_KEYS.CURRENT_DAY_START, currentStartOfDay);
       } else if (storedStartOfDay !== currentStartOfDay) {
-        // Day has changed! Reset daily activities
         setCheckinCompleted(false);
         setMicroGestureCompleted(false);
         setDailyPoints(0);
         localStorage.setItem(STORAGE_KEYS.CURRENT_DAY_START, currentStartOfDay);
       }
 
-      // Weekly cycle check
       const storedStartOfWeek = localStorage.getItem(STORAGE_KEYS.CURRENT_WEEK_START);
       const currentStartOfWeek = getStartOfWeek();
 
@@ -123,7 +140,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (storedStartOfWeek !== currentStartOfWeek) {
-        // Week has changed! Save the final progress of the previous week
         const finalProgress = parseInt(localStorage.getItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS) || '0', 10);
         
         setWeeklyHistory(prev => {
@@ -134,7 +150,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           return newHistory;
         });
 
-        // Reset for the new week
         setCurrentWeekProgress(0);
         setWeeklyPoints(0);
         localStorage.setItem(STORAGE_KEYS.CURRENT_WEEK_START, currentStartOfWeek);
@@ -143,29 +158,77 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkCycles();
-    // Check periodically (e.g., every hour) if the cycles have rolled over
     const interval = setInterval(checkCycles, 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Load from localStorage on mount and listen to storage events
+  const isInitialLoad = useRef(true);
+  const isSyncingFromRemote = useRef(false);
+
   useEffect(() => {
-    const loadData = () => {
-      const storedData = localStorage.getItem(STORAGE_KEYS.DATA);
-      if (storedData) {
-        const data = JSON.parse(storedData);
-        setPoints(data.points || 1200);
-        setLevel(data.level || 5);
-        setAgreements(data.agreements || []);
-        setExchanges(data.exchanges || []);
-        setWishlist(data.wishlist || []);
-        setEmpathyMessages(data.empathyMessages || []);
-        setNextDatePlan(data.nextDatePlan || null);
-        setCheckinCompleted(data.checkinCompleted || false);
-        setMicroGestureCompleted(data.microGestureCompleted || false);
-        setWeeklyHistory(data.weeklyHistory || []);
-        setCheckinHistory(data.checkinHistory || []);
+    const loadData = async () => {
+      // First load from local storage for fast render
+      try {
+        const storedData = localStorage.getItem(STORAGE_KEYS.DATA);
+        if (storedData) {
+          const data = JSON.parse(storedData);
+          setPoints(data.points || 1200);
+          setLevel(data.level || 5);
+          setAgreements(data.agreements || []);
+          setExchanges(data.exchanges || []);
+          setWishlist(data.wishlist || []);
+          setEmpathyMessages(data.empathyMessages || []);
+          setNextDatePlan(data.nextDatePlan || null);
+          setCheckinCompleted(data.checkinCompleted || false);
+          setMicroGestureCompleted(data.microGestureCompleted || false);
+          setWeeklyHistory(data.weeklyHistory || []);
+          setCheckinHistory(data.checkinHistory || []);
+        }
+      } catch (e) {
+        console.error('Error parsing stored data:', e);
       }
+
+      // Then load from Supabase if user is part of a couple
+      if (user?.coupleId) {
+        try {
+          const { data: coupleData, error } = await supabase
+            .from('couples')
+            .select('app_data')
+            .eq('id', user.coupleId)
+            .single();
+
+          if (error) throw error;
+
+          if (coupleData && coupleData.app_data) {
+            const data = coupleData.app_data;
+            isSyncingFromRemote.current = true;
+            
+            if (data.points !== undefined) setPoints(data.points);
+            if (data.level !== undefined) setLevel(data.level);
+            if (data.agreements) setAgreements(data.agreements);
+            if (data.exchanges) setExchanges(data.exchanges);
+            if (data.wishlist) setWishlist(data.wishlist);
+            if (data.empathyMessages) setEmpathyMessages(data.empathyMessages);
+            if (data.nextDatePlan !== undefined) setNextDatePlan(data.nextDatePlan);
+            if (data.checkinCompleted !== undefined) setCheckinCompleted(data.checkinCompleted);
+            if (data.microGestureCompleted !== undefined) setMicroGestureCompleted(data.microGestureCompleted);
+            if (data.weeklyHistory) setWeeklyHistory(data.weeklyHistory);
+            if (data.checkinHistory) setCheckinHistory(data.checkinHistory);
+            if (data.weeklyPoints !== undefined) setWeeklyPoints(data.weeklyPoints);
+            if (data.dailyPoints !== undefined) setDailyPoints(data.dailyPoints);
+            
+            // Save to local storage to keep it updated
+            localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(data));
+            
+            setTimeout(() => {
+              isSyncingFromRemote.current = false;
+            }, 500);
+          }
+        } catch (error) {
+          console.error('Error loading data from Supabase:', error);
+        }
+      }
+
       const storedProgress = localStorage.getItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS);
       if (storedProgress) {
         setCurrentWeekProgress(parseInt(storedProgress, 10));
@@ -174,6 +237,49 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     loadData();
 
+    // Subscribe to real-time changes
+    let subscription: any = null;
+    if (user?.coupleId) {
+      subscription = supabase
+        .channel(`couple_data_${user.coupleId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'couples',
+            filter: `id=eq.${user.coupleId}`
+          },
+          (payload) => {
+            if (payload.new && payload.new.app_data) {
+              const data = payload.new.app_data;
+              isSyncingFromRemote.current = true;
+              
+              if (data.points !== undefined) setPoints(data.points);
+              if (data.level !== undefined) setLevel(data.level);
+              if (data.agreements) setAgreements(data.agreements);
+              if (data.exchanges) setExchanges(data.exchanges);
+              if (data.wishlist) setWishlist(data.wishlist);
+              if (data.empathyMessages) setEmpathyMessages(data.empathyMessages);
+              if (data.nextDatePlan !== undefined) setNextDatePlan(data.nextDatePlan);
+              if (data.checkinCompleted !== undefined) setCheckinCompleted(data.checkinCompleted);
+              if (data.microGestureCompleted !== undefined) setMicroGestureCompleted(data.microGestureCompleted);
+              if (data.weeklyHistory) setWeeklyHistory(data.weeklyHistory);
+              if (data.checkinHistory) setCheckinHistory(data.checkinHistory);
+              if (data.weeklyPoints !== undefined) setWeeklyPoints(data.weeklyPoints);
+              if (data.dailyPoints !== undefined) setDailyPoints(data.dailyPoints);
+              
+              localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(data));
+              
+              setTimeout(() => {
+                isSyncingFromRemote.current = false;
+              }, 500);
+            }
+          }
+        )
+        .subscribe();
+    }
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.DATA || e.key === STORAGE_KEYS.CURRENT_WEEK_PROGRESS) {
         loadData();
@@ -181,12 +287,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (subscription) supabase.removeChannel(subscription);
+    };
+  }, [user?.coupleId]);
 
-  // Save to localStorage whenever state changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify({
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    if (isSyncingFromRemote.current) {
+      return;
+    }
+
+    const dataToSave = {
       points,
       level,
       agreements,
@@ -197,9 +314,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       checkinCompleted,
       microGestureCompleted,
       weeklyHistory,
-      checkinHistory
-    }));
-  }, [points, level, agreements, exchanges, wishlist, empathyMessages, nextDatePlan, checkinCompleted, microGestureCompleted, weeklyHistory, checkinHistory]);
+      checkinHistory,
+      weeklyPoints,
+      dailyPoints
+    };
+
+    localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(dataToSave));
+
+    // Sync to Supabase
+    if (user?.coupleId) {
+      supabase
+        .from('couples')
+        .update({ app_data: dataToSave })
+        .eq('id', user.coupleId)
+        .then(({ error }) => {
+          if (error) console.error('Error syncing to Supabase:', error);
+        });
+    }
+  }, [points, level, agreements, exchanges, wishlist, empathyMessages, nextDatePlan, checkinCompleted, microGestureCompleted, weeklyHistory, checkinHistory, weeklyPoints, dailyPoints, user?.coupleId]);
 
   const updateWeeklyProgress = (percentage: number) => {
     setCurrentWeekProgress(percentage);
@@ -233,7 +365,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
     setExchanges([newExchange, ...exchanges]);
     
-    // Dispatch a custom event for local notifications
     window.dispatchEvent(new CustomEvent('new_notification', { 
       detail: { title: 'Nova Permuta', message: `${exchange.authorName || 'Seu par'} propôs uma nova permuta: ${exchange.title}` }
     }));
@@ -244,20 +375,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (e.id === id) {
         const updated = { ...e, ...updates };
         
-        // If counter proposed
         if (updates.status === 'counter_proposed') {
           window.dispatchEvent(new CustomEvent('new_notification', { 
             detail: { title: 'Contraproposta Recebida', message: `Seu par fez uma contraproposta para: ${e.title}` }
           }));
         }
         
-        // If accepted
         if (updates.status === 'accepted') {
           window.dispatchEvent(new CustomEvent('new_notification', { 
             detail: { title: 'Permuta Aceita!', message: `O acordo foi fechado: ${e.title}` }
           }));
           
-          // Add to agreements automatically
           const agreementText = `Acordo: ${e.title} ${updated.counterOffer ? `em troca de ${updated.counterOffer}` : ''}`;
           addAgreement(agreementText);
         }
@@ -276,7 +404,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newItem: WishlistItem = {
       id: Date.now().toString(),
       link,
-      title: 'Novo Item', // In a real app we'd fetch metadata
+      title: 'Novo Item',
       createdAt: new Date().toISOString()
     };
     setWishlist([newItem, ...wishlist]);
@@ -306,26 +434,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const [weeklyPoints, setWeeklyPoints] = useState(() => {
-    const stored = localStorage.getItem('weekly_points');
-    // Default to 150 (50%) for prototype as requested
-    return stored ? parseInt(stored, 10) : 150;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('weekly_points', weeklyPoints.toString());
-  }, [weeklyPoints]);
-
-  const [dailyPoints, setDailyPoints] = useState(() => {
-    const stored = localStorage.getItem('daily_points');
-    return stored ? parseInt(stored, 10) : 0;
-  });
-  const DAILY_POINTS_CAP = 100;
-
-  useEffect(() => {
-    localStorage.setItem('daily_points', dailyPoints.toString());
-  }, [dailyPoints]);
-
   const addPoints = (amount: number) => {
     if (dailyPoints >= DAILY_POINTS_CAP) return;
     
@@ -336,8 +444,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getCoupleStatus = () => {
-    const WEEKLY_TARGET = 300; // Example target
-    const percentage = Math.min(100, Math.round((weeklyPoints / WEEKLY_TARGET) * 100));
+    const WEEKLY_TARGET = 300;
+    const percentage = Math.max(0, Math.min(100, Math.round((weeklyPoints / WEEKLY_TARGET) * 100) || 0));
     
     if (percentage <= 20) return { label: 'Precisamos Conversar', color: 'text-red-500', percentage };
     if (percentage <= 40) return { label: 'Ajustando a Rota', color: 'text-orange-500', percentage };
@@ -356,7 +464,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const completeCheckin = (feeling: string, tags: string[], note: string) => {
     setCheckinCompleted(true);
-    addPoints(50); // Reward for checkin
+    addPoints(50);
     
     const newCheckin: CheckinHistoryItem = {
       id: Date.now().toString(),
@@ -371,7 +479,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const completeMicroGesture = () => {
     setMicroGestureCompleted(true);
-    addPoints(20); // Reward for micro-gesture
+    addPoints(20);
   };
 
   return (
@@ -410,6 +518,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to access the data context.
+ */
 export function useData() {
   const context = useContext(DataContext);
   if (context === undefined) {

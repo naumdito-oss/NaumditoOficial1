@@ -3,15 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+// Context Providers
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Pages - Authentication & Onboarding
+import { Intro } from './pages/Intro';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Onboarding } from './pages/Onboarding';
-import { Intro } from './pages/Intro';
+
+// Pages - Main Application
 import { Home } from './pages/Home';
 import { Agreements } from './pages/Agreements';
 import { SosMode } from './pages/SosMode';
@@ -27,7 +34,11 @@ import { Privacy } from './pages/Privacy';
 import { EmpathyBox } from './pages/EmpathyBox';
 import { SaiaDaRotina } from './pages/SaiaDaRotina';
 
+/**
+ * Main application component that sets up routing and global providers.
+ */
 export default function App() {
+  // Initialize theme based on user preference stored in localStorage
   useEffect(() => {
     const theme = localStorage.getItem('theme');
     if (theme === 'dark') {
@@ -38,15 +49,19 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <DataProvider>
-        <BrowserRouter>
-          <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <DataProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
             <Route path="/" element={<Intro />} />
+            <Route path="/intro" element={<Intro />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/intro" element={<Intro />} />
+            
+            {/* Protected/App Routes */}
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/home" element={<Home />} />
             <Route path="/agreements" element={<Agreements />} />
@@ -66,5 +81,6 @@ export default function App() {
         </BrowserRouter>
       </DataProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

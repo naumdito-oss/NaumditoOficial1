@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BottomNav } from '../components/BottomNav';
-import { useData } from '../context/DataContext';
 import { motion } from 'motion/react';
 
+// Components
+import { BottomNav } from '../components/BottomNav';
+
+// Contexts
+import { useData } from '../context/DataContext';
+
+/**
+ * Surprise page component.
+ * Allows users to manage a wishlist and view upcoming special dates.
+ */
 export function Surprise() {
   const navigate = useNavigate();
   const { wishlist, addToWishlist, removeFromWishlist } = useData();

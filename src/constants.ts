@@ -1,3 +1,6 @@
+/**
+ * Keys used for storing data in the browser's localStorage.
+ */
 export const STORAGE_KEYS = {
   USER: 'naumdito_user',
   DATA: 'naumdito_data',
@@ -6,13 +9,23 @@ export const STORAGE_KEYS = {
   CURRENT_WEEK_PROGRESS: 'naumdito_current_week_progress',
 };
 
+/**
+ * Predefined vibes for empathy messages.
+ */
 export const EMPATHY_VIBES = [
   { id: 'fofo', label: 'Fofo', icon: 'favorite', color: 'text-pink-500 bg-pink-100 dark:bg-pink-900/30' },
   { id: 'sincero', label: 'Sincero', icon: 'volunteer_activism', color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30' },
   { id: 'engracado', label: 'Engraçado', icon: 'sentiment_very_satisfied', color: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' }
 ];
+
+/**
+ * Available categories for exchange items.
+ */
 export const EXCHANGE_TYPES = ['romantico', 'divertido', 'picante', 'ajuda'] as const;
 
+/**
+ * Predefined feelings for the daily check-in feature.
+ */
 export const CHECKIN_FEELINGS = [
   { icon: '😊', label: 'Feliz', id: 'happy' },
   { icon: '😌', label: 'Calmo(a)', id: 'calm' },
@@ -21,6 +34,9 @@ export const CHECKIN_FEELINGS = [
   { icon: '😔', label: 'Triste', id: 'sad' }
 ];
 
+/**
+ * Predefined tags for the daily check-in feature.
+ */
 export const CHECKIN_TAGS = [
   'Estresse no trabalho',
   'Falta de sono',
@@ -32,6 +48,9 @@ export const CHECKIN_TAGS = [
   'Lazer'
 ];
 
+/**
+ * Icons and styling for different types of date programs.
+ */
 export const PROGRAM_ICONS = {
   pipoca: { icon: 'movie', label: 'Cinema em Casa', color: 'bg-amber-100 text-amber-500 dark:bg-amber-900/30' },
   restaurante: { icon: 'restaurant', label: 'Restaurantes', color: 'bg-rose-100 text-rose-500 dark:bg-rose-900/30' },
@@ -39,6 +58,10 @@ export const PROGRAM_ICONS = {
   experiencia: { icon: 'explore', label: 'Experiências Novas', color: 'bg-purple-100 text-purple-500 dark:bg-purple-900/30' },
   outro: { icon: 'celebration', label: 'Outro', color: 'bg-slate-100 text-slate-500 dark:bg-slate-900/30' }
 };
+
+/**
+ * Tools and features available on the home screen.
+ */
 export const HOME_TOOLS = [
   { to: "/agreements", icon: "handshake", label: "Combinados", color: "bg-primary/10 text-primary" },
   { to: "/sos", icon: "emergency_home", label: "Central SOS", color: "bg-red-100 text-red-500" },

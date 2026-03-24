@@ -1,21 +1,38 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
+
+// Components
 import { BottomNav } from '../components/BottomNav';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'motion/react';
-import { EMPATHY_VIBES } from '../constants';
 import { Modal } from '../components/Modal';
 
+// Contexts
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
+
+// Constants
+import { EMPATHY_VIBES } from '../constants';
+
+/**
+ * EmpathyBox page component.
+ * Allows users to send and receive empathy messages (apologies, cute notes, etc.)
+ * to their partner.
+ */
 export function EmpathyBox() {
   const navigate = useNavigate();
   const { empathyMessages, addEmpathyMessage, removeEmpathyMessage } = useData();
   const { user } = useAuth();
   
+  // State for modal and form inputs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [selectedVibe, setSelectedVibe] = useState<'fofo' | 'sincero' | 'engracado'>('fofo');
 
+  /**
+   * Handles the submission of a new empathy message.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   const handleAddMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
@@ -29,6 +46,12 @@ export function EmpathyBox() {
     }
   };
 
+  /**
+   * Retrieves the configuration for a specific vibe.
+   * 
+   * @param {string} vibeId - The ID of the vibe to retrieve.
+   * @returns {Object} The vibe configuration object.
+   */
   const getVibeConfig = (vibeId: string) => {
     return EMPATHY_VIBES.find(v => v.id === vibeId) || EMPATHY_VIBES[0];
   };
@@ -41,7 +64,7 @@ export function EmpathyBox() {
             <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
           </div>
           <h2 className="text-navy-main dark:text-slate-100 text-lg md:text-xl font-bold leading-tight tracking-tight flex-1 text-center">Caixinha de Desculpas</h2>
-          <div className="flex size-10 items-center justify-end"></div>
+          <div className="flex size-10 items-center justify-end" />
         </header>
 
         <div className="p-4 md:p-8 flex flex-col gap-6">

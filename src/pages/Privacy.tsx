@@ -1,5 +1,10 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Privacy page component.
+ * Displays the application's privacy policy and data control options.
+ */
 export function Privacy() {
   const navigate = useNavigate();
 

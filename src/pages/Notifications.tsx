@@ -1,6 +1,15 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
+/**
+ * Notifications Page Component
+ * 
+ * Displays a list of recent notifications for the user, such as events,
+ * wishlist updates, check-ins, and exchanges.
+ * 
+ * @returns {JSX.Element} The rendered Notifications component.
+ */
 export function Notifications() {
   const navigate = useNavigate();
 

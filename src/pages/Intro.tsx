@@ -1,9 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+
+// Contexts
 import { useAuth } from '../context/AuthContext';
 
-const slides = [
+/**
+ * Interface representing a slide in the intro carousel.
+ */
+interface IntroSlide {
+  id: number;
+  title: string;
+  description: string;
+  image: string;
+  icon: string;
+  accent: string;
+}
+
+/**
+ * Array of slides for the intro carousel.
+ */
+const slides: IntroSlide[] = [
   {
     id: 1,
     title: "Dê voz ao silêncio",
@@ -32,15 +49,19 @@ const slides = [
 
 export function Intro() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
-    if (isAuthenticated && onboardingCompleted) {
-      navigate('/home');
+    const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true' || !!user?.profileData;
+    if (isAuthenticated) {
+      if (onboardingCompleted) {
+        navigate('/home');
+      } else {
+        navigate('/onboarding');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {

@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BottomNav } from '../components/BottomNav';
-import { useData } from '../context/DataContext';
 import { motion } from 'motion/react';
+
+// Components
+import { BottomNav } from '../components/BottomNav';
+
+// Contexts
+import { useData } from '../context/DataContext';
+
+// Constants
 import { PROGRAM_ICONS } from '../constants';
 
+/**
+ * SaiaDaRotina page component.
+ * Allows users to plan and view out-of-routine date ideas.
+ */
 export function SaiaDaRotina() {
   const navigate = useNavigate();
   const { nextDatePlan, updateNextDatePlan } = useData();

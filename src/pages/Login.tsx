@@ -1,26 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { motion } from 'motion/react';
 
+// Contexts
+import { useAuth } from '../context/AuthContext';
+
+/**
+ * Login page component.
+ * Allows users to authenticate using their email and password.
+ * Provides a responsive layout with branding on desktop and a focused form on mobile.
+ */
 export function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
+  
+  // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect to home if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/home');
     }
   }, [isAuthenticated, navigate]);
 
+  /**
+   * Handles the login form submission.
+   * Authenticates the user and redirects to the home page on success.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    
     try {
       await login(email, password);
       navigate('/home');
@@ -42,7 +59,7 @@ export function Login() {
             className="w-full h-full object-cover opacity-30 dark:opacity-50 scale-105"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background-light via-background-light/80 to-transparent dark:from-background-dark dark:via-background-dark/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-background-light via-background-light/80 to-transparent dark:from-background-dark dark:via-background-dark/80" />
         </div>
         
         <div className="relative z-10 max-w-lg">
@@ -52,7 +69,12 @@ export function Login() {
             transition={{ duration: 0.8 }}
           >
             <div className="size-24 rounded-3xl bg-white/50 dark:bg-white/10 backdrop-blur-md border border-primary/20 dark:border-white/20 flex items-center justify-center mb-8 shadow-2xl">
-              <img alt="NaumDito Logo" className="w-16 h-16 object-contain" src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" referrerPolicy="no-referrer"/>
+              <img 
+                alt="NaumDito Logo" 
+                className="w-16 h-16 object-contain" 
+                src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" 
+                referrerPolicy="no-referrer"
+              />
             </div>
             <h1 className="text-6xl font-black text-navy-main dark:text-white leading-tight tracking-tighter mb-6">
               Onde o silêncio <br />
@@ -75,7 +97,7 @@ export function Login() {
             className="w-full h-full object-cover opacity-10 dark:opacity-20"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-background-light/90 dark:bg-background-dark/90"></div>
+          <div className="absolute inset-0 bg-background-light/90 dark:bg-background-dark/90" />
         </div>
 
         <motion.div 
@@ -86,7 +108,12 @@ export function Login() {
         >
           <div className="md:hidden flex flex-col items-center mb-10">
             <div className="size-16 rounded-2xl bg-primary/10 dark:bg-peach-main/20 border border-primary/20 dark:border-peach-main/30 flex items-center justify-center mb-4">
-              <img alt="NaumDito Logo" className="w-10 h-10 object-contain" src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" referrerPolicy="no-referrer"/>
+              <img 
+                alt="NaumDito Logo" 
+                className="w-10 h-10 object-contain" 
+                src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" 
+                referrerPolicy="no-referrer"
+              />
             </div>
             <h2 className="text-3xl font-bold text-navy-main dark:text-white tracking-tight">NaumDito</h2>
           </div>
@@ -160,3 +187,4 @@ export function Login() {
     </div>
   );
 }
+

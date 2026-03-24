@@ -1,19 +1,35 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BottomNav } from '../components/BottomNav';
-import { useData } from '../context/DataContext';
 import { motion } from 'motion/react';
+
+// Components
+import { BottomNav } from '../components/BottomNav';
 import { Modal } from '../components/Modal';
 
+// Contexts
+import { useData } from '../context/DataContext';
+
+/**
+ * Agreements page component.
+ * Allows users to create, view, and manage relationship agreements (combinados).
+ * Users can also mark agreements as broken with a justification.
+ */
 export function Agreements() {
   const navigate = useNavigate();
   const { agreements, addAgreement, updateAgreement, removeAgreement } = useData();
+  
+  // State for modals and form inputs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isJustificationModalOpen, setIsJustificationModalOpen] = useState(false);
   const [newAgreement, setNewAgreement] = useState('');
   const [justification, setJustification] = useState('');
   const [agreementToBreak, setAgreementToBreak] = useState<string | null>(null);
 
+  /**
+   * Handles the submission of a new agreement.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   const handleAddAgreement = (e: React.FormEvent) => {
     e.preventDefault();
     if (newAgreement.trim()) {
@@ -23,6 +39,10 @@ export function Agreements() {
     }
   };
 
+  /**
+   * Handles marking an agreement as broken with a justification.
+   * Dispatches a custom event to simulate a notification.
+   */
   const handleBreakAgreement = () => {
     if (agreementToBreak && justification.trim()) {
       updateAgreement(agreementToBreak, { status: 'broken', justification: justification.trim() });
@@ -38,11 +58,21 @@ export function Agreements() {
     }
   };
 
+  /**
+   * Opens the justification modal for a specific agreement.
+   * 
+   * @param {string} id - The ID of the agreement to break.
+   */
   const openJustificationModal = (id: string) => {
     setAgreementToBreak(id);
     setIsJustificationModalOpen(true);
   };
 
+  /**
+   * Handles the removal of an agreement after user confirmation.
+   * 
+   * @param {string} id - The ID of the agreement to remove.
+   */
   const handleRemoveAgreement = (id: string) => {
     if (window.confirm("Tem certeza que deseja remover este acordo?")) {
       removeAgreement(id);
@@ -86,7 +116,7 @@ export function Agreements() {
                   initial={{ width: 0 }}
                   animate={{ width: `${progressPercentage}%` }}
                   className="h-full rounded-full bg-gradient-to-r from-primary to-primary-light"
-                ></motion.div>
+                />
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">Progresso Atual</p>
@@ -127,7 +157,7 @@ export function Agreements() {
                     <div className="flex flex-col flex-1 justify-center">
                       <p className="text-slate-900 dark:text-slate-100 text-base font-bold leading-tight mb-1">{agreement.text}</p>
                       <div className="flex items-center gap-1.5">
-                        <span className={`size-2 rounded-full ${agreement.status === 'active' ? 'bg-peach-500' : 'bg-red-500'}`}></span>
+                        <span className={`size-2 rounded-full ${agreement.status === 'active' ? 'bg-peach-500' : 'bg-red-500'}`} />
                         <p className={`text-[10px] font-bold uppercase tracking-wider ${agreement.status === 'active' ? 'text-peach-500 dark:text-peach-400' : 'text-red-500 dark:text-red-400'}`}>
                           Status: {agreement.status === 'active' ? 'ATIVO' : 'DESCUMPRIDO'}
                         </p>

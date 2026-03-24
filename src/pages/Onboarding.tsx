@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
-type OnboardingData = {
+/**
+ * Type definition for the onboarding data collected during the flow.
+ */
+export type OnboardingData = {
   name: string;
   gender: string;
   birthDate: string;
@@ -11,7 +16,7 @@ type OnboardingData = {
   goals: string[];
   emojiLanguage: string;
   musicStyle: string;
-  travelStyle: string;
+  travelStyle: string[];
   loveLanguages: string[];
   ourStory: string;
   limits: {
@@ -30,7 +35,7 @@ const INITIAL_DATA: OnboardingData = {
   goals: [],
   emojiLanguage: '',
   musicStyle: '',
-  travelStyle: '',
+  travelStyle: [],
   loveLanguages: [],
   ourStory: '',
   limits: {
@@ -40,34 +45,55 @@ const INITIAL_DATA: OnboardingData = {
   },
 };
 
+/**
+ * Onboarding component.
+ * Guides the user through a multi-step setup process to personalize their experience.
+ */
 export const Onboarding: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, updatePhoto } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
-  const navigate = useNavigate();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  /**
+   * Advances to the next step in the onboarding flow.
+   */
   const nextStep = () => setCurrentStep((prev) => prev + 1);
+
+  /**
+   * Returns to the previous step in the onboarding flow.
+   */
   const prevStep = () => setCurrentStep((prev) => prev - 1);
 
-  const handleFinish = () => {
+  /**
+   * Completes the onboarding process, saves the data to local storage,
+   * and redirects the user to the home page.
+   */
+  const handleFinish = async () => {
     localStorage.setItem('onboarding_completed', 'true');
     localStorage.setItem('user_profile', JSON.stringify(data));
     
-    // Update naumdito_user to include the new data
-    const storedUser = localStorage.getItem('naumdito_user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      const updatedUser = {
-        ...user,
-        name: data.name || user.name,
-        partnerName: data.partnerName || user.partnerName,
-        photoUrl: data.photoUrl || user.photoUrl
-      };
-      localStorage.setItem('naumdito_user', JSON.stringify(updatedUser));
+    try {
+      if (user && user.id) {
+        // Update profile in Supabase
+        await supabase
+          .from('profiles')
+          .update({ name: data.name })
+          .eq('id', user.id);
+
+        // Upload photo if selected
+        if (selectedFile) {
+          await updatePhoto(selectedFile);
+        }
+      }
+    } catch (e) {
+      console.error('Error updating profile in Supabase:', e);
     }
     
     navigate('/home');
-    window.location.reload(); // Force reload to refresh AuthContext
   };
 
   const steps = [
@@ -96,11 +122,12 @@ export const Onboarding: React.FC = () => {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setData({ ...data, photoUrl: reader.result as string });
-                    };
-                    reader.readAsDataURL(file);
+                     setSelectedFile(file);
+                     const reader = new FileReader();
+                     reader.onloadend = () => {
+                       setData({ ...data, photoUrl: reader.result as string });
+                     };
+                     reader.readAsDataURL(file);
                   }
                 }}
                 accept="image/*"
@@ -197,42 +224,7 @@ export const Onboarding: React.FC = () => {
         </div>
       ),
     },
-    // Step 2: Emojis & Music
-    {
-      title: 'Comunicação & Estilo',
-      subtitle: 'Como vocês se expressam no dia a dia?',
-      content: (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-3 relative group">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Linguagem dos Emojis</label>
-            <p className="text-[10px] text-slate-400 italic font-bold">"O que cada emoji significa para mim"</p>
-            <div className="relative">
-              <textarea
-                value={data.emojiLanguage}
-                onChange={(e) => setData({ ...data, emojiLanguage: e.target.value })}
-                className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none min-h-[150px] font-medium text-sm"
-                placeholder="Ex: ❤️ = Te amo muito, 😤 = Estou chateado(a) mas quero conversar..."
-              />
-              <span className="material-symbols-outlined absolute right-4 top-5 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
-            </div>
-          </div>
-          <div className="space-y-3 relative group">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Estilo Musical</label>
-            <p className="text-[10px] text-slate-400 italic font-bold">"Quais ritmos embalam o casal?"</p>
-            <div className="relative">
-              <textarea
-                value={data.musicStyle}
-                onChange={(e) => setData({ ...data, musicStyle: e.target.value })}
-                className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none min-h-[150px] font-medium text-sm"
-                placeholder="Ex: MPB para cozinhar, Rock para viagens, Lo-fi para relaxar..."
-              />
-              <span className="material-symbols-outlined absolute right-4 top-5 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    // Step 3: Travel Style
+    // Step 2: Travel Style
     {
       title: 'Estilo de Viagem',
       subtitle: 'Como vocês gostam de explorar o mundo?',
@@ -241,9 +233,14 @@ export const Onboarding: React.FC = () => {
           {['Aventura', 'Tranquila', 'Romântica', 'Luxo', 'Econômica', 'Cultural'].map((style) => (
             <button
               key={style}
-              onClick={() => setData({ ...data, travelStyle: style })}
+              onClick={() => {
+                const travelStyle = data.travelStyle.includes(style)
+                  ? data.travelStyle.filter((s) => s !== style)
+                  : [...data.travelStyle, style];
+                setData({ ...data, travelStyle });
+              }}
               className={`p-6 rounded-3xl border text-center transition-all flex flex-col items-center justify-center gap-2 ${
-                data.travelStyle === style
+                data.travelStyle.includes(style)
                   ? 'bg-peach-main border-peach-main text-white shadow-xl shadow-peach-main/30'
                   : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-peach-main/30'
               }`}

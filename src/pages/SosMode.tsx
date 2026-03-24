@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BottomNav } from '../components/BottomNav';
+import { AnimatePresence, motion } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
-import { motion, AnimatePresence } from 'motion/react';
+
+// Components
+import { BottomNav } from '../components/BottomNav';
 import { Modal } from '../components/Modal';
 
+/**
+ * SosMode page component.
+ * Provides tools for conflict resolution, including AI-assisted mediation
+ * and emergency time-out features.
+ */
 export function SosMode() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'mediation' | 'emergency'>('mediation');

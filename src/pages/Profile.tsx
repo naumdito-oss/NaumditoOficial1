@@ -1,37 +1,58 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Components
 import { BottomNav } from '../components/BottomNav';
+
+// Contexts
 import { useAuth } from '../context/AuthContext';
 
+/**
+ * Profile Page Component
+ * 
+ * Displays user information, allows photo updates, and provides navigation
+ * to settings, notifications, privacy, integrations, and logout.
+ * 
+ * @returns {JSX.Element} The rendered Profile component.
+ */
 export function Profile() {
   const navigate = useNavigate();
   const { user, logout, updatePhoto } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Handles user logout and redirects to the landing page.
+   */
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  /**
+   * Triggers the hidden file input click event.
+   */
   const handlePhotoClick = () => {
     fileInputRef.current?.click();
   };
 
+  /**
+   * Handles the file selection event, reads the image as a base64 string,
+   * and updates the user's profile photo.
+   * 
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
+   */
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        updatePhoto(base64String);
-      };
-      reader.readAsDataURL(file);
+      updatePhoto(file);
     }
   };
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">
       <div className="w-full max-w-4xl mx-auto flex flex-col flex-1">
+        
+        {/* Header */}
         <header className="flex items-center p-4 md:p-8 sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10 border-b border-primary/10">
           <div onClick={() => navigate(-1)} className="flex size-10 md:size-12 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 cursor-pointer transition-colors">
             <span className="material-symbols-outlined text-navy-main dark:text-slate-100">arrow_back</span>
@@ -42,7 +63,10 @@ export function Profile() {
           </div>
         </header>
 
+        {/* Main Content */}
         <main className="flex-1 px-4 md:px-8 py-12 space-y-12">
+          
+          {/* User Info Section */}
           <div className="flex flex-col items-center text-center">
             <div className="size-32 md:size-40 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative group overflow-hidden cursor-pointer" onClick={handlePhotoClick}>
               <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse"></div>
@@ -62,12 +86,14 @@ export function Profile() {
                 className="hidden" 
               />
             </div>
+            
             <div className="flex items-center gap-2 group cursor-pointer">
               <h2 className="text-3xl font-black text-navy-main dark:text-slate-100 tracking-tight">{user?.name || 'Usuário'}</h2>
               <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity text-xl">edit</span>
             </div>
             <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">{user?.email || 'usuario@email.com'}</p>
             
+            {/* Partner Code Display */}
             {user?.coupleCode && (
               <div className="mt-6 flex flex-col items-center">
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Seu Código de Parceiro</p>
@@ -88,6 +114,7 @@ export function Profile() {
             )}
           </div>
 
+          {/* Navigation Links Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button 
               onClick={() => navigate('/settings')}

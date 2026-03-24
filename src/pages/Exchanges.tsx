@@ -1,17 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
+
+// Components
 import { BottomNav } from '../components/BottomNav';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'motion/react';
-import { EXCHANGE_TYPES } from '../constants';
 import { Modal } from '../components/Modal';
 
+// Contexts
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
+
+// Constants
+import { EXCHANGE_TYPES } from '../constants';
+
+/**
+ * Exchanges page component.
+ * Allows users to create, view, and manage exchanges (permutas) with their partner.
+ * Users can propose exchanges, make counter-offers, and accept agreements.
+ */
 export function Exchanges() {
   const navigate = useNavigate();
   const { exchanges, addExchange, updateExchange, removeExchange } = useData();
   const { user } = useAuth();
   
+  // State for modals and form inputs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
   const [selectedExchangeId, setSelectedExchangeId] = useState<string | null>(null);
@@ -32,6 +44,11 @@ export function Exchanges() {
     return () => window.removeEventListener('new_notification', handleNotification);
   }, []);
 
+  /**
+   * Handles the submission of a new exchange request.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   const handleAddExchange = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.title.trim()) {
@@ -46,12 +63,22 @@ export function Exchanges() {
     }
   };
 
+  /**
+   * Opens the counter-offer modal for a specific exchange.
+   * 
+   * @param {string} id - The ID of the exchange to counter.
+   */
   const handleOpenCounterModal = (id: string) => {
     setSelectedExchangeId(id);
     setCounterOfferText('');
     setIsCounterModalOpen(true);
   };
 
+  /**
+   * Handles the submission of a counter-offer for an exchange.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   const handleSendCounterOffer = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedExchangeId && counterOfferText.trim()) {
@@ -64,10 +91,20 @@ export function Exchanges() {
     }
   };
 
+  /**
+   * Handles accepting an exchange agreement.
+   * 
+   * @param {string} id - The ID of the exchange to accept.
+   */
   const handleAcceptAgreement = (id: string) => {
     updateExchange(id, { status: 'accepted' });
   };
 
+  /**
+   * Handles the removal of an exchange after user confirmation.
+   * 
+   * @param {string} id - The ID of the exchange to remove.
+   */
   const handleRemoveExchange = (id: string) => {
     if (window.confirm("Tem certeza que deseja cancelar esta permuta?")) {
       removeExchange(id);
