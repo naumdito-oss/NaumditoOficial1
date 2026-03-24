@@ -118,13 +118,27 @@ export function Home() {
   // Check for profile completion
   const userProfile = useMemo(() => {
     try {
+      // Try to load from user metadata first (database)
+      if (user?.metadata) {
+        return user.metadata;
+      }
+      // Fallback to localStorage
       const stored = localStorage.getItem('user_profile');
       return stored && stored !== 'undefined' && stored !== 'null' ? JSON.parse(stored) : {};
     } catch (e) {
       return {};
     }
-  }, []);
-  const isIncomplete = !userProfile?.ourStory || !userProfile?.limits?.respect;
+  }, [user]);
+  
+  const isIncomplete = useMemo(() => {
+    const hasName = !!user?.name;
+    const hasPhoto = !!user?.photoUrl;
+    const hasStory = !!userProfile?.ourStory;
+    const hasLimits = !!userProfile?.limits?.respect;
+    const hasPartner = !!userProfile?.partnerName;
+    
+    return !hasName || !hasPhoto || !hasStory || !hasLimits || !hasPartner;
+  }, [user, userProfile]);
 
   /**
    * Prepares the data for the weekly evolution chart.

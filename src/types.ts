@@ -11,6 +11,7 @@ export interface User {
   level: number;
   coupleId?: string;
   coupleCode?: string;
+  metadata?: any;
 }
 
 /**

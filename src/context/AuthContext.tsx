@@ -69,7 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           level: profile.level || 1,
           photoUrl: profile.photo_url,
           coupleCode: profile.couples?.couple_code,
-          id: profile.id
+          id: profile.id,
+          metadata: profile.metadata
         };
         setUser(loggedUser);
         connectSocket(loggedUser.coupleId);
@@ -145,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         data: {
           name,
-          photo_url: 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=2070&auto=format&fit=crop'
+          photo_url: null
         }
       }
     });

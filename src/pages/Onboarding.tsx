@@ -27,11 +27,11 @@ export type OnboardingData = {
 };
 
 const INITIAL_DATA: OnboardingData = {
-  name: 'Thais e Bruno',
+  name: '',
   gender: '',
   birthDate: '',
-  partnerName: 'Amor',
-  photoUrl: 'https://images.unsplash.com/photo-1621112904887-419379ce6824?q=80&w=2070&auto=format&fit=crop',
+  partnerName: '',
+  photoUrl: '',
   goals: [],
   emojiLanguage: '',
   musicStyle: '',
@@ -58,6 +58,49 @@ export const Onboarding: React.FC = () => {
   const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Load existing data
+  React.useEffect(() => {
+    if (user) {
+      const fetchProfile = async () => {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('metadata, name, photo_url')
+            .eq('id', user.id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (profile) {
+            const dbMetadata = profile.metadata || {};
+            const stored = localStorage.getItem('user_profile');
+            const localData = stored ? JSON.parse(stored) : {};
+            
+            setData(prev => ({
+              ...prev,
+              ...dbMetadata,
+              ...localData,
+              name: localData.name || profile.name || user.name || '',
+              photoUrl: localData.photoUrl || profile.photo_url || user.photoUrl || '',
+            }));
+          }
+        } catch (e) {
+          // Fallback to localStorage if metadata column doesn't exist yet
+          const stored = localStorage.getItem('user_profile');
+          const localData = stored ? JSON.parse(stored) : {};
+          setData(prev => ({
+            ...prev,
+            ...localData,
+            name: localData.name || user.name || '',
+            photoUrl: localData.photoUrl || user.photoUrl || '',
+          }));
+        }
+      };
+      
+      fetchProfile();
+    }
+  }, [user]);
+
   /**
    * Advances to the next step in the onboarding flow.
    */
@@ -73,15 +116,22 @@ export const Onboarding: React.FC = () => {
    * and redirects the user to the home page.
    */
   const handleFinish = async () => {
+    // Save to localStorage for immediate persistence and offline access
     localStorage.setItem('onboarding_completed', 'true');
     localStorage.setItem('user_profile', JSON.stringify(data));
     
     try {
       if (user && user.id) {
         // Update profile in Supabase
+        // We save the entire data object to a metadata column for cross-device persistence
+        const updateData: any = { 
+          name: data.name,
+          metadata: data // This requires the metadata column to exist
+        };
+        
         await supabase
           .from('profiles')
-          .update({ name: data.name })
+          .update(updateData)
           .eq('id', user.id);
 
         // Upload photo if selected
@@ -91,6 +141,15 @@ export const Onboarding: React.FC = () => {
       }
     } catch (e) {
       console.error('Error updating profile in Supabase:', e);
+      // If metadata column doesn't exist, try updating just the name
+      try {
+        await supabase
+          .from('profiles')
+          .update({ name: data.name })
+          .eq('id', user!.id);
+      } catch (innerError) {
+        console.error('Fallback update failed:', innerError);
+      }
     }
     
     navigate('/home');
