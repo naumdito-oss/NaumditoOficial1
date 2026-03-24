@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabase';
 import { notificationService } from '../services/notificationService';
 import { STORAGE_KEYS } from '../constants';
+import { getStartOfDay, getStartOfWeek } from '../utils/dateUtils';
 import {
   Agreement,
   ExchangeItem,
@@ -10,7 +11,8 @@ import {
   CheckinHistoryItem,
   WeeklyProgress,
   EmpathyMessage,
-  NextDatePlan
+  NextDatePlan,
+  Achievement
 } from '../types';
 
 /**
@@ -26,6 +28,7 @@ interface DataContextType {
   nextDatePlan: NextDatePlan | null;
   weeklyHistory: WeeklyProgress[];
   checkinHistory: CheckinHistoryItem[];
+  achievements: Achievement[];
   addAgreement: (text: string) => void;
   updateAgreement: (id: string, updates: Partial<Agreement>) => void;
   removeAgreement: (id: string) => void;
@@ -44,6 +47,8 @@ interface DataContextType {
   completeMicroGesture: () => void;
   updateWeeklyProgress: (percentage: number) => void;
   getCoupleStatus: () => { label: string; color: string; percentage: number };
+  recordAchievement: (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'>) => Promise<void>;
+  claimAchievement: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -64,6 +69,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [microGestureCompleted, setMicroGestureCompleted] = useState(false);
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyProgress[]>([]);
   const [checkinHistory, setCheckinHistory] = useState<CheckinHistoryItem[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [currentWeekProgress, setCurrentWeekProgress] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS);
     return stored ? parseInt(stored, 10) : 0;
@@ -79,27 +85,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return isNaN(parsed) ? 0 : parsed;
   });
   const DAILY_POINTS_CAP = 100;
-
-  /**
-   * Helper to get the start of the current day in ISO format.
-   */
-  const getStartOfDay = () => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    return now.toISOString();
-  };
-
-  /**
-   * Helper to get the start of the current week (Monday) in ISO format.
-   */
-  const getStartOfWeek = () => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    const startOfWeek = new Date(now.setDate(diff));
-    startOfWeek.setHours(0, 0, 0, 0);
-    return startOfWeek.toISOString();
-  };
 
   useEffect(() => {
     const checkCycles = () => {
@@ -267,6 +252,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           note: c.note
         })));
 
+        // Load achievements
+        const { data: achievementsData } = await supabase
+          .from('achievements')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (achievementsData) setAchievements(achievementsData.map(a => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          points: a.points,
+          icon: a.icon,
+          claimed: a.claimed,
+          createdAt: a.created_at
+        })));
+
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
       }
@@ -282,7 +283,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       supabase.channel('wishlist_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist_items', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
       supabase.channel('empathy_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'empathy_messages', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
       supabase.channel('date_plans_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'next_date_plans', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('checkins_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: `couple_id=eq.${user?.coupleId}` }, fetchData)
+      supabase.channel('checkins_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
+      supabase.channel('achievements_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `user_id=eq.${user?.id}` }, fetchData)
     ];
 
     channels.forEach(channel => channel.subscribe());
@@ -388,6 +390,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    if (updates.status === 'completed' && user?.id) {
+      await recordAchievement({
+        title: 'Acordo Cumprido',
+        description: `Você cumpriu o acordo: ${currentAgreement.text}`,
+        points: 100,
+        icon: 'task_alt'
+      });
+    }
   };
 
   const addAgreement = async (text: string) => {
@@ -404,6 +415,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error('Error adding agreement:', error);
       return;
     }
+
+    await recordAchievement({
+      title: 'Novo Acordo',
+      description: `Você criou um novo combinado: ${text}`,
+      points: 20,
+      icon: 'handshake'
+    });
 
     // Notify partner
     const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
@@ -441,6 +459,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error('Error adding exchange:', error);
       return;
     }
+
+    await recordAchievement({
+      title: 'Nova Permuta',
+      description: `Você propôs uma nova permuta: ${exchange.title}`,
+      points: 30,
+      icon: 'swap_horiz'
+    });
     
     // Notify partner
     const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
@@ -491,6 +516,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           // Add as an agreement
           const agreementText = `Acordo: ${currentExchange.title} ${updates.counterOffer ? `em troca de ${updates.counterOffer}` : ''}`;
           addAgreement(agreementText);
+
+          await recordAchievement({
+            title: 'Permuta Aceita!',
+            description: `O acordo foi fechado: ${currentExchange.title}`,
+            points: 50,
+            icon: 'handshake'
+          });
         } else if (updates.status === 'rejected') {
           title = 'Permuta Recusada';
           message = `Seu par recusou a permuta: ${currentExchange.title}`;
@@ -553,6 +585,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    await recordAchievement({
+      title: 'Desejo Adicionado',
+      description: `Você adicionou "${title}" à lista de desejos.`,
+      points: 20,
+      icon: 'card_giftcard'
+    });
+
     // Notify partner
     const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
     if (partnerId) {
@@ -606,6 +645,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }, { onConflict: 'couple_id' });
 
     if (error) console.error('Error updating next date plan:', error);
+
+    await recordAchievement({
+      title: 'Encontro Planejado',
+      description: `Você atualizou o plano para o próximo encontro: ${plan.title}`,
+      points: 40,
+      icon: 'calendar_month'
+    });
   };
 
   const addPoints = async (amount: number) => {
@@ -646,7 +692,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       checkin_completed: true
     }).eq('id', user.id);
 
-    await addPoints(50);
+    await recordAchievement({
+      title: 'Check-in Diário',
+      description: 'Você realizou o check-in emocional de hoje.',
+      points: 50,
+      icon: 'event_available'
+    });
 
     // Notify partner
     const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
@@ -670,7 +721,47 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       micro_gesture_completed: true
     }).eq('id', user.id);
 
-    await addPoints(20);
+    await recordAchievement({
+      title: 'Gesto do Dia',
+      description: 'Você realizou o gesto do dia para o seu par.',
+      points: 10,
+      icon: 'favorite'
+    });
+  };
+
+  const recordAchievement = async (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'>) => {
+    if (!user?.id || !user?.coupleId) return;
+
+    const { error } = await supabase.from('achievements').insert({
+      user_id: user.id,
+      couple_id: user.coupleId,
+      title: achievement.title,
+      description: achievement.description,
+      points: achievement.points,
+      icon: achievement.icon,
+      claimed: false
+    });
+
+    if (error) console.error('Error recording achievement:', error);
+  };
+
+  const claimAchievement = async (id: string) => {
+    if (!user?.id) return;
+
+    const achievement = achievements.find(a => a.id === id);
+    if (!achievement || achievement.claimed) return;
+
+    const { error: updateError } = await supabase
+      .from('achievements')
+      .update({ claimed: true })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error claiming achievement:', updateError);
+      return;
+    }
+
+    await addPoints(achievement.points);
   };
 
   /**
@@ -718,6 +809,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       completeMicroGesture,
       weeklyHistory,
       checkinHistory,
+      achievements,
+      recordAchievement,
+      claimAchievement,
       updateWeeklyProgress,
       getCoupleStatus
     }}>

@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
+import { BottomNav } from '../components/layout/BottomNav';
 
 // Contexts
-import { useData } from '../context/DataContext';
+import { useData } from '../context/DataProvider';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabase';
 import { notificationService } from '../services/notificationService';
 
 // Constants & Data
@@ -218,10 +218,10 @@ export function Home() {
       <div className="w-full max-w-6xl mx-auto px-4 md:px-8">
         
         {/* Header Section */}
-        <header className="flex items-center py-6 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10 border-b border-primary/5">
-          <div className="flex items-center gap-4">
-            <div className="relative flex items-center">
-              <div className="size-12 md:size-14 rounded-full border-2 border-white dark:border-slate-900 p-0.5 shadow-lg overflow-hidden z-20">
+        <header className="flex items-center py-4 md:py-6 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-30 border-b border-primary/5 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex items-center gap-3 md:gap-4">
+            <Link to="/profile" className="relative flex items-center shrink-0 group active:scale-95 transition-transform">
+              <div className="size-10 md:size-14 rounded-full border-2 border-white dark:border-slate-900 p-0.5 shadow-md overflow-hidden z-20 bg-white dark:bg-slate-800">
                 <img 
                   alt="You" 
                   className="w-full h-full object-cover rounded-full" 
@@ -229,7 +229,7 @@ export function Home() {
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div className="size-12 md:size-14 rounded-full border-2 border-white dark:border-slate-900 p-0.5 shadow-lg overflow-hidden -ml-4 z-10">
+              <div className="size-10 md:size-14 rounded-full border-2 border-white dark:border-slate-900 p-0.5 shadow-md overflow-hidden -ml-3 md:-ml-4 z-10 bg-white dark:bg-slate-800">
                 <img 
                   alt="Partner" 
                   className="w-full h-full object-cover rounded-full" 
@@ -237,43 +237,46 @@ export function Home() {
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center z-30">
-                <span className="material-symbols-outlined text-[10px] text-white font-bold">favorite</span>
+              <div className="absolute -bottom-0.5 -right-0.5 size-4 md:size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center z-30 shadow-sm">
+                <span className="material-symbols-outlined text-[8px] md:text-[10px] text-white font-bold">favorite</span>
               </div>
-            </div>
-            <div>
-              <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Bem-vindo de volta</p>
-              <h2 className="text-navy-main dark:text-slate-100 text-lg md:text-xl font-black leading-tight tracking-tight">
-                {user?.name || 'Usuário'}
+            </Link>
+            <div className="min-w-0">
+              <p className="text-[9px] md:text-xs font-black text-slate-400 uppercase tracking-[0.15em] mb-0 leading-none">Bem-vindo</p>
+              <h2 className="text-navy-main dark:text-slate-100 text-base md:text-xl font-black leading-tight tracking-tight truncate">
+                {user?.name?.split(' ')[0] || 'Usuário'}
               </h2>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Link to="/points" className="flex flex-col items-end group">
-              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-primary/10 shadow-sm group-hover:border-primary/30 transition-all">
-                <span className="material-symbols-outlined text-peach-main text-xl">stars</span>
-                <span className="text-navy-main dark:text-slate-100 font-black text-sm">{points.toLocaleString()}</span>
+          <div className="flex items-center gap-2 md:gap-3">
+            <Link to="/points" className="flex items-center gap-1.5 bg-white dark:bg-slate-800 pl-2 pr-3 py-1.5 rounded-full border border-primary/10 shadow-sm hover:border-primary/30 active:scale-95 transition-all group">
+              <div className="size-7 rounded-full bg-peach-main/10 flex items-center justify-center text-peach-main group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-lg">stars</span>
               </div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 group-hover:text-primary transition-colors">Nível {level}</span>
+              <div className="flex flex-col leading-none">
+                <span className="text-navy-main dark:text-slate-100 font-black text-xs">{points.toLocaleString()}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Nível {level}</span>
+              </div>
             </Link>
-            <div className="flex gap-2">
+            
+            <div className="flex gap-1.5">
               <button 
                 onClick={() => navigate('/notifications')}
-                className="flex size-10 md:size-12 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all relative"
+                className="flex size-9 md:size-11 items-center justify-center rounded-full bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-90 transition-all relative border border-primary/5"
               >
-                <span className="material-symbols-outlined text-[24px] text-primary">notifications</span>
+                <span className="material-symbols-outlined text-[20px] md:text-[24px] text-primary">notifications</span>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 size-5 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-white font-black">
+                  <span className="absolute top-0 right-0 size-4 bg-peach-main rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] text-white font-black animate-in zoom-in">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
               <button 
-                onClick={() => navigate('/profile')}
-                className="flex size-10 md:size-12 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                onClick={() => navigate('/settings')}
+                className="flex size-9 md:size-11 items-center justify-center rounded-full bg-white dark:bg-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-90 transition-all border border-primary/5"
               >
-                <span className="material-symbols-outlined text-[24px] text-slate-500">settings</span>
+                <span className="material-symbols-outlined text-[20px] md:text-[24px] text-slate-500">settings</span>
               </button>
             </div>
           </div>

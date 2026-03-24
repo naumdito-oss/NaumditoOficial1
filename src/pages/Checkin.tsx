@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Contexts
-import { useData } from '../context/DataContext';
+import { useData } from '../context/DataProvider';
 
 // Constants
 import { CHECKIN_FEELINGS, CHECKIN_TAGS } from '../constants';

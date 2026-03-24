@@ -21,7 +21,7 @@ export interface Agreement {
   id: string;
   text: string;
   createdAt: string;
-  status: 'active' | 'broken';
+  status: 'active' | 'broken' | 'completed';
   justification?: string;
 }
 
@@ -91,4 +91,17 @@ export interface NextDatePlan {
   photo: string;
   programType: 'pipoca' | 'restaurante' | 'parque' | 'experiencia' | 'outro';
   updatedAt: string;
+}
+
+/**
+ * Represents a user achievement or completed action.
+ */
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  icon: string;
+  claimed: boolean;
+  createdAt: string;
 }

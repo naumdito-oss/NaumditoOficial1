@@ -4,8 +4,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
 // Components
-import { BottomNav } from '../components/BottomNav';
-import { Modal } from '../components/Modal';
+import { BottomNav } from '../components/layout/BottomNav';
+import { Modal } from '../components/common/Modal';
 
 /**
  * SosMode page component.

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabase';
 
 export type NotificationType = 'event' | 'wishlist' | 'checkin' | 'exchange' | 'system';
 

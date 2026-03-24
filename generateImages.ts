@@ -5,7 +5,7 @@ import path from 'path';
 import { microGestures } from './src/data/microGestures';
 
 // Initialize Supabase
-// We need to read the config from src/lib/supabase.ts or env vars
+// We need to read the config from src/config/supabase.ts or env vars
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
+import { BottomNav } from '../components/layout/BottomNav';
 
 // Types
 interface Integration {

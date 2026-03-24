@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabase';
 
 /**
  * Defines the shape of the authentication context.

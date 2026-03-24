@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+import { useTheme } from '../hooks/useTheme';
 
 /**
  * Settings Page Component
@@ -11,36 +13,14 @@ import { useNavigate } from 'react-router-dom';
  */
 export function Settings() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   
   // Preferences State
-  const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [sound, setSound] = useState(true);
 
-  /**
-   * Initializes the dark mode state based on the document's class list
-   * on component mount.
-   */
-  useEffect(() => {
-    setDarkMode(document.documentElement.classList.contains('dark'));
-  }, []);
-
-  /**
-   * Toggles the dark mode theme, updates the document class list,
-   * and persists the preference in local storage.
-   */
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
+  const darkMode = theme === 'dark';
+  const toggleDarkMode = toggleTheme;
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">

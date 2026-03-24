@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabase';
 import { microGestures as initialGestures } from '../data/microGestures';
 import { GoogleGenAI } from '@google/genai';
 

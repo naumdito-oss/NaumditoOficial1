@@ -2,8 +2,8 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { BottomNav } from '../components/layout/BottomNav';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 
 // Contexts
 import { useAuth } from '../context/AuthContext';

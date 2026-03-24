@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
-import { Modal } from '../components/Modal';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { BottomNav } from '../components/layout/BottomNav';
+import { Modal } from '../components/common/Modal';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 
 // Contexts
 import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
+import { useData } from '../context/DataProvider';
 
 // Constants
 import { EXCHANGE_TYPES } from '../constants';
+
+import { PageHeader } from '../components/layout/PageHeader';
 
 /**
  * Exchanges page component.

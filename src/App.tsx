@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // Context Providers
 import { AuthProvider } from './context/AuthContext';
-import { DataProvider } from './context/DataContext';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { DataProvider } from './context/DataProvider';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Pages - Authentication & Onboarding
 import { Intro } from './pages/Intro';
@@ -35,19 +34,14 @@ import { EmpathyBox } from './pages/EmpathyBox';
 import { SaiaDaRotina } from './pages/SaiaDaRotina';
 import { AdminGestures } from './pages/AdminGestures';
 
+import { useTheme } from './hooks/useTheme';
+
 /**
  * Main application component that sets up routing and global providers.
  */
 export default function App() {
-  // Initialize theme based on user preference stored in localStorage
-  useEffect(() => {
-    const theme = localStorage.getItem('theme');
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+  // Initialize theme based on user preference
+  useTheme();
 
   return (
     <ErrorBoundary>

@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
+import { BottomNav } from '../components/layout/BottomNav';
 
 // Contexts
-import { useData } from '../context/DataContext';
+import { useData } from '../context/DataProvider';
+
+import { formatShortDate } from '../utils/dateUtils';
 
 /**
  * Points Page Component
@@ -18,8 +20,25 @@ import { useData } from '../context/DataContext';
  */
 export function Points() {
   const navigate = useNavigate();
-  const { points, level } = useData();
+  const { points, level, achievements, claimAchievement } = useData();
   const [showFeedback, setShowFeedback] = React.useState(false);
+  const [claimingId, setClaimingId] = React.useState<string | null>(null);
+
+  // Filter for recent unclaimed achievements or recently claimed ones
+  const recentAchievements = achievements
+    .filter(a => !a.claimed || (new Date().getTime() - new Date(a.createdAt).getTime() < 86400000))
+    .slice(0, 5);
+
+  const handleClaim = async (id: string) => {
+    setClaimingId(id);
+    try {
+      await claimAchievement(id);
+    } catch (error) {
+      console.error('Error claiming achievement:', error);
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   // Level calculation logic (mock)
   const pointsPerLevel = 1000;
@@ -102,21 +121,40 @@ export function Points() {
             <section className="space-y-6">
               <h2 className="text-xl font-black text-navy-main dark:text-slate-100 tracking-tight px-2">Conquistas Recentes</h2>
               <div className="space-y-4">
-                {[
-                  { title: "Check-in Diário", desc: "Concluído recentemente", points: "+50", icon: "event_available" },
-                  { title: "Gesto Diário", desc: "Ontem", points: "+10", icon: "favorite" }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 bg-white dark:bg-slate-900/40 p-5 rounded-2xl border border-primary/5 shadow-sm group hover:border-peach-main/20 transition-all">
-                    <div className="size-12 rounded-2xl bg-peach-main/10 flex items-center justify-center text-peach-main group-hover:scale-110 transition-transform">
-                      <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+                {recentAchievements.length > 0 ? (
+                  recentAchievements.map((item) => (
+                    <div key={item.id} className={`flex items-center gap-4 bg-white dark:bg-slate-900/40 p-5 rounded-2xl border border-primary/5 shadow-sm group hover:border-peach-main/20 transition-all ${item.claimed ? 'opacity-60' : ''}`}>
+                      <div className={`size-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${item.claimed ? 'bg-slate-100 text-slate-400' : 'bg-peach-main/10 text-peach-main'}`}>
+                        <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-navy-main dark:text-slate-100 text-sm font-black">{item.title}</p>
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                          {formatShortDate(item.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="text-peach-main font-black text-sm">+{item.points} pts</span>
+                        {!item.claimed && (
+                          <button
+                            onClick={() => handleClaim(item.id)}
+                            disabled={claimingId === item.id}
+                            className="text-[10px] font-black text-white bg-navy-main px-3 py-1 rounded-lg uppercase tracking-widest hover:bg-navy-main/90 transition-colors disabled:opacity-50"
+                          >
+                            {claimingId === item.id ? '...' : 'Resgatar'}
+                          </button>
+                        )}
+                        {item.claimed && (
+                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Resgatado</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-navy-main dark:text-slate-100 text-sm font-black">{item.title}</p>
-                      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{item.desc}</p>
-                    </div>
-                    <span className="text-peach-main font-black text-sm">{item.points} pts</span>
+                  ))
+                ) : (
+                  <div className="text-center py-8 bg-white dark:bg-slate-900/40 rounded-2xl border border-dashed border-primary/20">
+                    <p className="text-slate-400 text-xs font-bold italic">Nenhuma conquista recente. Comece a interagir para ganhar pontos!</p>
                   </div>
-                ))}
+                )}
               </div>
             </section>
           </div>

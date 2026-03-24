@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
+import { BottomNav } from '../components/layout/BottomNav';
 
 // Contexts
-import { useData } from '../context/DataContext';
+import { useData } from '../context/DataProvider';
 
 // Constants
 import { PROGRAM_ICONS } from '../constants';

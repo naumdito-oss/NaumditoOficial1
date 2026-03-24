@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 // Components
-import { BottomNav } from '../components/BottomNav';
-import { Modal } from '../components/Modal';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { BottomNav } from '../components/layout/BottomNav';
+import { Modal } from '../components/common/Modal';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 
 // Contexts
-import { useData } from '../context/DataContext';
+import { useData } from '../context/DataProvider';
+
+import { PageHeader } from '../components/layout/PageHeader';
 
 /**
  * Agreements page component.
@@ -87,17 +89,14 @@ export function Agreements() {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden transition-colors duration-300">
       <div className="w-full max-w-4xl mx-auto flex flex-col flex-1 pb-24">
-        <header className="flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 sticky top-0 z-10 border-b border-primary/10">
-          <div onClick={() => navigate(-1)} className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors cursor-pointer">
-            <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
-          </div>
-          <h2 className="text-navy-main dark:text-slate-100 text-lg md:text-xl font-bold leading-tight tracking-tight flex-1 text-center">Acordos - Nossos combinados</h2>
-          <div className="flex size-10 items-center justify-end">
+        <PageHeader 
+          title="Acordos - Nossos combinados" 
+          rightAction={
             <button className="flex items-center justify-center rounded-full size-10 hover:bg-primary/10 transition-colors">
               <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">more_horiz</span>
             </button>
-          </div>
-        </header>
+          }
+        />
 
         <div className="p-4 md:p-8">
           <div className="flex flex-col">
