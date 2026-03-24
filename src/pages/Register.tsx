@@ -37,8 +37,15 @@ export function Register() {
    */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
+
+    // Client-side validation
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    setIsLoading(true);
     
     try {
       const newUser = await register(name, email, partnerCode, password);
@@ -51,7 +58,17 @@ export function Register() {
         navigate('/onboarding');
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta.');
+      console.error("Full registration error:", err);
+      // Map Supabase errors to user-friendly messages
+      let message = 'Erro ao criar conta.';
+      const errorMessage = (err.message || '').toLowerCase();
+      
+      if (errorMessage.includes('user already registered')) {
+        message = 'Este e-mail já está cadastrado. Tente fazer login.';
+      } else if (errorMessage.includes('password should be at least 6 characters') || errorMessage.includes('password must be at least 6 characters')) {
+        message = 'A senha deve ter pelo menos 6 caracteres.';
+      }
+      setError(message);
     } finally {
       setIsLoading(false);
     }

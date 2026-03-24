@@ -179,7 +179,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Register the user
-    console.log("Attempting to sign up with:", { email, name });
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -192,10 +191,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (authError) {
-      console.error("Supabase Auth Error:", authError);
+      console.error("Auth Error:", authError);
       throw authError;
     }
-    console.log("Sign up successful:", authData);
 
     // Se a sessão for nula após o registro, significa que a confirmação de e-mail está ativada no Supabase.
     if (!authData.session && !authData.user) {
@@ -213,8 +211,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       
       if (profileError) {
-        console.error("Erro ao criar perfil:", profileError);
-        throw new Error('Erro ao criar perfil do usuário.');
+        console.error("Profile Error Details:", profileError);
+        throw new Error(`Erro ao criar perfil do usuário: ${profileError.message}`);
       }
     }
 
@@ -227,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (newCoupleError) {
-        console.error("Erro ao criar casal:", newCoupleError);
+        console.error("Couple Error:", newCoupleError);
         throw new Error('Erro ao criar o código do casal. Verifique as políticas do banco de dados (RLS).');
       }
       coupleId = newCouple.id;
@@ -241,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authData.user.id);
 
       if (profileError) {
-        console.error("Erro ao atualizar perfil:", profileError);
+        console.error("Profile Update Error:", profileError);
         throw new Error('Erro ao vincular perfil ao casal.');
       }
     }
