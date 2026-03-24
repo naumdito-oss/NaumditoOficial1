@@ -18,7 +18,7 @@ import { useData } from '../context/DataContext';
  */
 export function Points() {
   const navigate = useNavigate();
-  const { points, level, redeemPoints } = useData();
+  const { points, level } = useData();
 
   // Level calculation logic (mock)
   const pointsPerLevel = 1000;
@@ -28,19 +28,10 @@ export function Points() {
 
   /**
    * Handles the redemption of a reward.
-   * Prompts the user for confirmation and attempts to deduct the points.
-   * 
-   * @param {number} cost - The point cost of the reward.
-   * @param {string} rewardName - The name of the reward.
+   * Currently disabled as requested.
    */
-  const handleRedeem = (cost: number, rewardName: string) => {
-    if (window.confirm(`Deseja resgatar "${rewardName}" por ${cost} pontos?`)) {
-      if (redeemPoints(cost)) {
-        alert("Resgate realizado com sucesso! Aproveite sua recompensa.");
-      } else {
-        alert("Pontos insuficientes para este resgate.");
-      }
-    }
+  const handleRedeem = () => {
+    alert("Funcionalidade em breve! Estamos fechando parcerias para trazer recompensas reais para você.");
   };
 
   return (
@@ -143,14 +134,15 @@ export function Points() {
                   <div className="h-40 relative overflow-hidden">
                     <img src={reward.img} alt={reward.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-navy-main/60 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <span className="text-[10px] font-black text-white bg-peach-main px-2 py-0.5 rounded uppercase tracking-widest inline-block mb-1">Destaque</span>
+                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
+                      <span className="text-[10px] font-black text-white bg-peach-main px-2 py-0.5 rounded uppercase tracking-widest inline-block">Destaque</span>
+                      <span className="text-[10px] font-black text-white bg-navy-main/80 px-2 py-0.5 rounded uppercase tracking-widest inline-block">Em breve</span>
                     </div>
                   </div>
                   <div className="p-6 flex flex-col flex-1">
                     <p className="text-navy-main dark:text-slate-100 text-base font-black leading-tight mb-6 flex-1">{reward.title}</p>
                     <button 
-                      onClick={() => handleRedeem(reward.cost, reward.title)}
+                      onClick={() => handleRedeem()}
                       className="w-full h-12 bg-navy-main rounded-2xl text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-navy-main/90 transition-all shadow-lg shadow-navy-main/20 active:scale-95"
                     >
                       <span className="material-symbols-outlined text-lg text-peach-main">confirmation_number</span>

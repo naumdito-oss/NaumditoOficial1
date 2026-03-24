@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
  */
 interface AuthContextType {
   user: User | null;
+  partner: User | null;
   login: (email: string, password?: string) => Promise<void>;
   logout: () => void;
   register: (name: string, email: string, partnerCode?: string, password?: string) => Promise<any>;
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [partner, setPartner] = useState<User | null>(null);
   const [channel, setChannel] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,12 +75,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           metadata: profile.metadata
         };
         setUser(loggedUser);
+        fetchPartnerProfile(loggedUser.id, loggedUser.coupleId);
         connectSocket(loggedUser.coupleId);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPartnerProfile = async (userId: string, coupleId?: string) => {
+    if (!coupleId) return;
+    try {
+      const { data: partnerProfile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('couple_id', coupleId)
+        .neq('id', userId)
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+          console.error('Error fetching partner profile:', error);
+        }
+        setPartner(null);
+        return;
+      }
+
+      if (partnerProfile) {
+        const partnerUser: User = {
+          email: partnerProfile.email,
+          name: partnerProfile.name,
+          coupleId: partnerProfile.couple_id,
+          points: partnerProfile.points || 0,
+          level: partnerProfile.level || 1,
+          photoUrl: partnerProfile.photo_url,
+          id: partnerProfile.id,
+          metadata: partnerProfile.metadata
+        };
+        setPartner(partnerUser);
+      }
+    } catch (error) {
+      console.error('Error in fetchPartnerProfile:', error);
     }
   };
 
@@ -195,6 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setPartner(null);
     setChannel(null);
   };
 
@@ -243,7 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, updatePhoto, isAuthenticated: !!user, channel, loading }}>
+    <AuthContext.Provider value={{ user, partner, login, logout, register, updatePhoto, isAuthenticated: !!user, channel, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -79,10 +79,6 @@ export function Agreements() {
     }
   };
 
-  // Mock progress calculation
-  const totalTarget = Math.max(agreements.length + 2, 5); 
-  const progressPercentage = Math.round((agreements.length / totalTarget) * 100);
-
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden transition-colors duration-300">
       <div className="w-full max-w-4xl mx-auto flex flex-col flex-1 pb-24">
@@ -98,44 +94,18 @@ export function Agreements() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-8">
-          {/* Progress Section */}
-          <section className="md:col-span-5 flex flex-col gap-4 p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 h-fit">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-900 dark:text-slate-100 text-lg font-bold">Harmonia do Casal</p>
-                <p className="text-primary text-sm font-semibold">{agreements.length} de {totalTarget} combinados</p>
-              </div>
-              <div className="bg-peach-main/10 p-3 rounded-2xl">
-                <span className="material-symbols-outlined text-3xl text-peach-main">favorite</span>
-              </div>
+        <div className="p-4 md:p-8">
+          <div className="flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-slate-900 dark:text-slate-100 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Ativos</h3>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center justify-center gap-2 bg-navy-main text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-navy-main/20 active:scale-95 transition-all hover:bg-navy-main/90"
+              >
+                <span className="material-symbols-outlined text-lg">add_circle</span>
+                Novo Combinado
+              </button>
             </div>
-            <div className="space-y-3 mt-2">
-              <div className="w-full h-3 rounded-full bg-primary/20 overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPercentage}%` }}
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-primary-light"
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">Progresso Atual</p>
-                <p className="text-primary text-sm font-semibold">{progressPercentage}% concluído</p>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="w-full mt-4 flex items-center justify-center gap-2 bg-navy-main text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-navy-main/20 active:scale-95 transition-all hover:bg-navy-main/90"
-            >
-              <span className="material-symbols-outlined">add_circle</span>
-              Criar Novo Combinado
-            </button>
-          </section>
-
-          {/* Agreements List */}
-          <div className="md:col-span-7 flex flex-col">
-            <h3 className="text-slate-900 dark:text-slate-100 text-sm font-bold uppercase tracking-[0.1em] pb-4 opacity-70">Acordos Ativos</h3>
             <div className="flex flex-col gap-3">
               {agreements.length === 0 ? (
                 <div className="text-center bg-white dark:bg-slate-900/20 rounded-3xl p-12 border border-dashed border-slate-200 dark:border-slate-800">

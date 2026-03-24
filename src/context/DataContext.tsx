@@ -35,7 +35,6 @@ interface DataContextType {
   addToWishlist: (link: string) => void;
   removeFromWishlist: (id: string) => void;
   addPoints: (amount: number) => void;
-  redeemPoints: (amount: number) => boolean;
   addEmpathyMessage: (message: Omit<EmpathyMessage, 'id' | 'createdAt'>) => void;
   removeEmpathyMessage: (id: string) => void;
   updateNextDatePlan: (plan: Omit<NextDatePlan, 'updatedAt'>) => void;
@@ -54,30 +53,11 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
  */
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [points, setPoints] = useState(1200);
-  const [level, setLevel] = useState(5);
+  const [points, setPoints] = useState(0);
+  const [level, setLevel] = useState(1);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
-  const [exchanges, setExchanges] = useState<ExchangeItem[]>([
-    { 
-      id: '1', 
-      title: 'Jantar Especial', 
-      description: 'Noite sem Celular', 
-      type: 'romantico', 
-      status: 'pending', 
-      createdAt: new Date().toISOString() 
-    },
-    { 
-      id: '2', 
-      title: 'Massagem nos pés', 
-      description: 'Lavar a louça', 
-      type: 'ajuda', 
-      status: 'accepted', 
-      createdAt: new Date().toISOString() 
-    }
-  ]);
-  const [wishlist, setWishlist] = useState<WishlistItem[]>([
-    { id: '1', link: 'loja-exemplo.com/produto-xyz', title: 'Relógio Minimalista', createdAt: new Date().toISOString() }
-  ]);
+  const [exchanges, setExchanges] = useState<ExchangeItem[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [empathyMessages, setEmpathyMessages] = useState<EmpathyMessage[]>([]);
   const [nextDatePlan, setNextDatePlan] = useState<NextDatePlan | null>(null);
   const [checkinCompleted, setCheckinCompleted] = useState(false);
@@ -87,8 +67,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [currentWeekProgress, setCurrentWeekProgress] = useState(0);
   const [weeklyPoints, setWeeklyPoints] = useState(() => {
     const stored = localStorage.getItem('weekly_points');
-    const parsed = stored ? parseInt(stored, 10) : 150;
-    return isNaN(parsed) ? 150 : parsed;
+    const parsed = stored ? parseInt(stored, 10) : 0;
+    return isNaN(parsed) ? 0 : parsed;
   });
   const [dailyPoints, setDailyPoints] = useState(() => {
     const stored = localStorage.getItem('daily_points');
@@ -173,8 +153,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const storedData = localStorage.getItem(STORAGE_KEYS.DATA);
         if (storedData) {
           const data = JSON.parse(storedData);
-          setPoints(data.points || 1200);
-          setLevel(data.level || 5);
+          setPoints(data.points === 1200 ? 0 : (data.points || 0));
+          setLevel(data.level || 1);
           setAgreements(data.agreements || []);
           setExchanges(data.exchanges || []);
           setWishlist(data.wishlist || []);
@@ -204,7 +184,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const data = coupleData.app_data;
             isSyncingFromRemote.current = true;
             
-            if (data.points !== undefined) setPoints(data.points);
+            if (data.points !== undefined) {
+              setPoints(data.points === 1200 ? 0 : data.points);
+            }
             if (data.level !== undefined) setLevel(data.level);
             if (data.agreements) setAgreements(data.agreements);
             if (data.exchanges) setExchanges(data.exchanges);
@@ -437,23 +419,51 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addToWishlist = async (link: string) => {
+    if (!user?.id) return;
+
+    // Basic metadata extraction (mock or simple heuristic)
+    let title = 'Novo Item';
+    let image = '';
+
+    // Simple heuristic for common sites
+    if (link.includes('amazon')) title = 'Produto Amazon';
+    else if (link.includes('mercadolivre')) title = 'Produto Mercado Livre';
+    else if (link.includes('magazineluiza')) title = 'Produto Magalu';
+    else if (link.includes('shopee')) title = 'Produto Shopee';
+
+    // Attempt to fetch real metadata using a public API (microlink is free for small usage)
+    try {
+      const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(link)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          title = data.data.title || title;
+          image = data.data.image?.url || data.data.logo?.url || '';
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching link metadata:', e);
+    }
+
     const newItem: WishlistItem = {
       id: Date.now().toString(),
       link,
-      title: 'Novo Item',
+      title,
+      image,
+      authorId: user.id,
       createdAt: new Date().toISOString()
     };
     setWishlist([newItem, ...wishlist]);
 
     // Notify partner
-    if (user?.id && user?.coupleId) {
+    if (user?.coupleId) {
       const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
       if (partnerId) {
         await notificationService.createNotification({
           user_id: partnerId,
           type: 'wishlist',
           title: 'Novo Item na Wishlist',
-          description: `Seu par adicionou um novo item à lista de desejos.`,
+          description: `Seu par adicionou "${title}" à lista de desejos.`,
           icon: 'card_giftcard',
           color: 'bg-pink-500',
           link: '/surprise'
@@ -504,14 +514,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (percentage <= 60) return { label: 'Caminhando Juntos', color: 'text-yellow-500', percentage };
     if (percentage <= 80) return { label: 'Sintonia Fina', color: 'text-green-500', percentage };
     return { label: 'Amor em Alta', color: 'text-emerald-500', percentage };
-  };
-
-  const redeemPoints = (amount: number) => {
-    if (points >= amount) {
-      setPoints(prev => prev - amount);
-      return true;
-    }
-    return false;
   };
 
   const completeCheckin = async (feeling: string, tags: string[], note: string) => {
@@ -571,7 +573,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       removeEmpathyMessage,
       updateNextDatePlan,
       addPoints,
-      redeemPoints,
       checkinCompleted,
       completeCheckin,
       microGestureCompleted,

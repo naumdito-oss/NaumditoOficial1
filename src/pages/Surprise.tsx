@@ -7,6 +7,7 @@ import { BottomNav } from '../components/BottomNav';
 
 // Contexts
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Surprise page component.
@@ -14,6 +15,7 @@ import { useData } from '../context/DataContext';
  */
 export function Surprise() {
   const navigate = useNavigate();
+  const { user, partner } = useAuth();
   const { wishlist, addToWishlist, removeFromWishlist } = useData();
   const [newLink, setNewLink] = useState('');
 
@@ -88,35 +90,43 @@ export function Surprise() {
                     <p className="text-slate-500">Sua wishlist está vazia.</p>
                   </div>
                 ) : (
-                  wishlist.map((item) => (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      key={item.id} 
-                      className="flex items-center gap-4 p-4 bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group hover:shadow-md transition-all"
-                    >
-                      <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                        {item.image ? (
-                          <img className="h-full w-full object-cover" src={item.image} alt={item.title} />
-                        ) : (
-                          <span className="material-symbols-outlined text-3xl text-slate-300">image</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-navy-main dark:text-slate-100 font-bold text-base truncate">{item.title || 'Novo Item'}</h3>
-                        <p className="text-slate-500 text-xs truncate font-medium">{item.link}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer" className="size-10 flex items-center justify-center rounded-full bg-peach-main/10 text-peach-main hover:scale-110 transition-transform">
-                          <span className="material-symbols-outlined text-[20px]">open_in_new</span>
-                        </a>
-                        <button onClick={() => handleRemoveFromWishlist(item.id)} className="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all">
-                          <span className="material-symbols-outlined text-[20px]">delete</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))
+                  wishlist.map((item) => {
+                    const isMine = item.authorId === user?.id;
+                    return (
+                      <motion.div 
+                        layout
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        key={item.id} 
+                        className="flex items-center gap-4 p-4 bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group hover:shadow-md transition-all relative overflow-hidden"
+                      >
+                        <div className="h-24 w-24 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-white/5">
+                          {item.image ? (
+                            <img className="h-full w-full object-cover" src={item.image} alt={item.title} referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className="material-symbols-outlined text-3xl text-slate-300">image</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isMine ? 'bg-peach-main/10 text-peach-main' : 'bg-primary/10 text-primary'}`}>
+                              {isMine ? 'Minha Escolha' : `Escolha de ${partner?.name || 'Parceiro'}`}
+                            </span>
+                          </div>
+                          <h3 className="text-navy-main dark:text-slate-100 font-bold text-base truncate">{item.title || 'Novo Item'}</h3>
+                          <p className="text-slate-500 text-xs truncate font-medium">{item.link}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer" className="size-10 flex items-center justify-center rounded-full bg-peach-main/10 text-peach-main hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-[20px]">open_in_new</span>
+                          </a>
+                          <button onClick={() => handleRemoveFromWishlist(item.id)} className="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all">
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })
                 )}
               </div>
             </section>
@@ -136,21 +146,55 @@ export function Surprise() {
               </div>
               
               <div className="space-y-4">
-                {[
-                  { icon: "favorite", label: "Aniversário de Namoro", date: "15 de Outubro", countdown: "Em 12 dias", color: "text-peach-main bg-peach-main/10" },
-                  { icon: "flight", label: "Próxima Viagem", date: "20 de Novembro", countdown: "Em 45 dias", color: "text-primary bg-primary/10" }
-                ].map((date, idx) => (
-                  <div key={idx} className="bg-white dark:bg-slate-900/40 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all">
-                    <div className={`size-14 rounded-2xl flex items-center justify-center ${date.color} group-hover:scale-110 transition-transform`}>
-                      <span className="material-symbols-outlined text-2xl">{date.icon}</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-navy-main dark:text-slate-100 font-bold text-base">{date.label}</h3>
-                      <p className="text-slate-500 text-xs font-medium">{date.date}</p>
-                    </div>
-                    <span className="text-[10px] font-black text-slate-400 bg-slate-50 dark:bg-white/5 px-3 py-1 rounded-full uppercase tracking-widest">{date.countdown}</span>
-                  </div>
-                ))}
+                {(() => {
+                  const allDates = [
+                    ...(user?.metadata?.specialDates || []),
+                    ...(partner?.metadata?.specialDates || [])
+                  ].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i); // Unique by ID
+
+                  if (allDates.length === 0) {
+                    return (
+                      <div className="bg-white dark:bg-slate-900/40 p-8 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+                        <p className="text-slate-500 text-sm">Nenhuma data especial cadastrada ainda.</p>
+                      </div>
+                    );
+                  }
+
+                  return allDates.map((date, idx) => {
+                    const eventDate = new Date(date.date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // Calculate next occurrence
+                    const nextOccurrence = new Date(today.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                    if (nextOccurrence < today) {
+                      nextOccurrence.setFullYear(today.getFullYear() + 1);
+                    }
+                    
+                    const diffTime = Math.abs(nextOccurrence.getTime() - today.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    const countdownText = diffDays === 0 ? "É HOJE!" : `Em ${diffDays} dias`;
+                    const formattedDate = eventDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+
+                    return (
+                      <div key={date.id || idx} className="bg-white dark:bg-slate-900/40 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all">
+                        <div className={`size-14 rounded-2xl flex items-center justify-center ${idx % 2 === 0 ? 'text-peach-main bg-peach-main/10' : 'text-primary bg-primary/10'} group-hover:scale-110 transition-transform`}>
+                          <span className="material-symbols-outlined text-2xl">
+                            {date.label.toLowerCase().includes('viagem') ? 'flight' : 
+                             date.label.toLowerCase().includes('beijo') ? 'favorite' : 
+                             date.label.toLowerCase().includes('casamento') ? 'celebration' : 'event'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-navy-main dark:text-slate-100 font-bold text-base">{date.label}</h3>
+                          <p className="text-slate-500 text-xs font-medium">{formattedDate}</p>
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 bg-slate-50 dark:bg-white/5 px-3 py-1 rounded-full uppercase tracking-widest">{countdownText}</span>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </section>
 
@@ -170,17 +214,33 @@ export function Surprise() {
               
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { title: "Jantar Romântico", tag: "Encontro", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCpkQ4IOUnZ-MT-Cj5WuC5AFKEltR8d0IiSL73Y3rsyGRnl76rVPh_rSv6oykWH9ZBbTmTn1_6P2TmNtNzVn6FLnbQsVf_rNP6GHWuKGwjYMNYJ_8CeDacQHpenzdYS3961Cx4FA1EKm9LuBc5cHLP6pvRRa_OGojMaeBQi3o5rKlbzW8mBU0u7GEftNqq_rFFOc4D-akKCCB0-wW8Jf4ebOmPyUzvdopRr-hfSwr8ZHED6fZxnpw9bXiIrH9ojw4evMS3D888QqdhN" },
-                  { title: "Kit de Massagem", tag: "Presente", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCIsmJrjfQEFItkiSCZKjorfFWqb_WrdfV51q6eEV0LbZs41qWnDwxPRdfhFpo_Smaw-CzuILM6LZfzuwjStSgHwr3SM-0TYlIVxzraRwkiFpDS4bl4QGbZRaOkEaYoYdQA2m9BZafD5CcEU42JGloVpCEQgIsZ8UgHQbh3zN2zf10k9zvxfy8D4mHTzPrPXRWR87SYEEIbGGrocgaUUDM0ZjgAvGf5_37LdwsBxxJr3hEdP-WL8p45I4OIlfv4E4GFaFFUo_vdaHuq" }
+                  { 
+                    title: "Jantar Romântico", 
+                    tag: "Encontro", 
+                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCpkQ4IOUnZ-MT-Cj5WuC5AFKEltR8d0IiSL73Y3rsyGRnl76rVPh_rSv6oykWH9ZBbTmTn1_6P2TmNtNzVn6FLnbQsVf_rNP6GHWuKGwjYMNYJ_8CeDacQHpenzdYS3961Cx4FA1EKm9LuBc5cHLP6pvRRa_OGojMaeBQi3o5rKlbzW8mBU0u7GEftNqq_rFFOc4D-akKCCB0-wW8Jf4ebOmPyUzvdopRr-hfSwr8ZHED6fZxnpw9bXiIrH9ojw4evMS3D888QqdhN",
+                    link: "https://www.tripadvisor.com.br/Restaurants-g303631-Sao_Paulo_State_of_Sao_Paulo.html"
+                  },
+                  { 
+                    title: "Kit de Massagem", 
+                    tag: "Presente", 
+                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCIsmJrjfQEFItkiSCZKjorfFWqb_WrdfV51q6eEV0LbZs41qWnDwxPRdfhFpo_Smaw-CzuILM6LZfzuwjStSgHwr3SM-0TYlIVxzraRwkiFpDS4bl4QGbZRaOkEaYoYdQA2m9BZafD5CcEU42JGloVpCEQgIsZ8UgHQbh3zN2zf10k9zvxfy8D4mHTzPrPXRWR87SYEEIbGGrocgaUUDM0ZjgAvGf5_37LdwsBxxJr3hEdP-WL8p45I4OIlfv4E4GFaFFUo_vdaHuq",
+                    link: "https://www.amazon.com.br/s?k=kit+massagem+relaxante"
+                  }
                 ].map((item, idx) => (
-                  <div key={idx} className="relative h-64 rounded-[2rem] overflow-hidden shadow-lg group">
+                  <a 
+                    key={idx} 
+                    href={item.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="relative h-64 rounded-[2rem] overflow-hidden shadow-lg group block"
+                  >
                     <img className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700" src={item.img} referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-navy-main/90 via-navy-main/20 to-transparent"></div>
                     <div className="absolute bottom-5 left-5 right-5">
                       <span className="text-[10px] font-black text-white bg-peach-main px-2 py-0.5 rounded uppercase tracking-widest inline-block mb-1">{item.tag}</span>
                       <h4 className="text-white font-bold text-sm leading-tight">{item.title}</h4>
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </section>

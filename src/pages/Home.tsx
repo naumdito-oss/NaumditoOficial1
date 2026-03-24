@@ -27,6 +27,8 @@ export function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
+    points,
+    level,
     checkinCompleted, 
     microGestureCompleted, 
     completeMicroGesture, 
@@ -249,10 +251,13 @@ export function Home() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col items-end mr-2">
-              <span className="text-navy-main dark:text-slate-100 font-black text-sm">NaumDito</span>
-              <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Onde o silêncio encontra a voz</span>
-            </div>
+            <Link to="/points" className="flex flex-col items-end group">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-primary/10 shadow-sm group-hover:border-primary/30 transition-all">
+                <span className="material-symbols-outlined text-peach-main text-xl">stars</span>
+                <span className="text-navy-main dark:text-slate-100 font-black text-sm">{points.toLocaleString()}</span>
+              </div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 group-hover:text-primary transition-colors">Nível {level}</span>
+            </Link>
             <div className="flex gap-2">
               <button 
                 onClick={() => navigate('/notifications')}
@@ -313,8 +318,8 @@ export function Home() {
                     <div className="absolute bottom-full left-0 mb-3 w-72 p-4 bg-navy-main text-white text-[11px] rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-20 leading-relaxed border border-white/10">
                       <p className="font-bold mb-2 text-emerald-main">Como subir seu status:</p>
                       <ul className="space-y-2">
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Complete o Check-in Diário (+20%)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Realize o Micro-gesto do Dia (+5%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Complete o Check-in Diário (+50 pts)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Realize o Micro-gesto do Dia (+10 pts)</li>
                         <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Cumpra combinados e permutas</li>
                         <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Mantenha a frequência de uso do app</li>
                       </ul>

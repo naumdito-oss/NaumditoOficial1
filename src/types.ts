@@ -47,6 +47,7 @@ export interface WishlistItem {
   link: string;
   title?: string;
   image?: string;
+  authorId: string;
   createdAt: string;
 }
 
