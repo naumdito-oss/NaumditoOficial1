@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 
 // Components
 import { BottomNav } from '../components/BottomNav';
 import { Modal } from '../components/Modal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // Contexts
 import { useAuth } from '../context/AuthContext';
@@ -26,23 +27,15 @@ export function Exchanges() {
   // State for modals and form inputs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [selectedExchangeId, setSelectedExchangeId] = useState<string | null>(null);
+  const [exchangeToDelete, setExchangeToDelete] = useState<string | null>(null);
   const [counterOfferText, setCounterOfferText] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
     type: EXCHANGE_TYPES[0] as typeof EXCHANGE_TYPES[number]
   });
-
-  // Listen for local notifications (simulating real-time)
-  useEffect(() => {
-    const handleNotification = (e: any) => {
-      // In a real app, this would use a proper toast library
-      // For now, we just rely on the UI updating automatically via context
-    };
-    window.addEventListener('new_notification', handleNotification);
-    return () => window.removeEventListener('new_notification', handleNotification);
-  }, []);
 
   /**
    * Handles the submission of a new exchange request.
@@ -102,13 +95,22 @@ export function Exchanges() {
 
   /**
    * Handles the removal of an exchange after user confirmation.
+   */
+  const handleConfirmDelete = () => {
+    if (exchangeToDelete) {
+      removeExchange(exchangeToDelete);
+      setExchangeToDelete(null);
+    }
+  };
+
+  /**
+   * Opens the delete confirmation modal.
    * 
    * @param {string} id - The ID of the exchange to remove.
    */
-  const handleRemoveExchange = (id: string) => {
-    if (window.confirm("Tem certeza que deseja cancelar esta permuta?")) {
-      removeExchange(id);
-    }
+  const openDeleteModal = (id: string) => {
+    setExchangeToDelete(id);
+    setIsConfirmDeleteOpen(true);
   };
 
   return (
@@ -195,7 +197,7 @@ export function Exchanges() {
                             }`}>
                               {exchange.status === 'accepted' ? 'Acordo Fechado' : exchange.status === 'counter_proposed' ? 'Contraproposta Recebida' : 'Aguardando Resposta'}
                             </p>
-                            <button onClick={() => handleRemoveExchange(exchange.id)} className="shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors -mt-2 -mr-2">
+                            <button onClick={() => openDeleteModal(exchange.id)} className="shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors -mt-2 -mr-2">
                               <span className="material-symbols-outlined text-lg">close</span>
                             </button>
                           </div>
@@ -320,6 +322,17 @@ export function Exchanges() {
           </button>
         </form>
       </Modal>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteOpen}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Cancelar Permuta"
+        message="Tem certeza que deseja cancelar esta permuta? Esta ação não pode ser desfeita."
+        confirmText="Cancelar Permuta"
+        type="danger"
+      />
 
       <BottomNav />
     </div>

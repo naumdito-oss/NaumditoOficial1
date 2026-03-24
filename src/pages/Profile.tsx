@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Components
 import { BottomNav } from '../components/BottomNav';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // Contexts
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +20,9 @@ export function Profile() {
   const navigate = useNavigate();
   const { user, logout, updatePhoto } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  const [copySuccess, setCopySuccess] = useState(false);
 
   /**
    * Handles user logout and redirects to the landing page.
@@ -26,6 +30,24 @@ export function Profile() {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  /**
+   * Opens the logout confirmation modal.
+   */
+  const openLogoutModal = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  /**
+   * Copies the couple code to the clipboard.
+   */
+  const handleCopyCode = () => {
+    if (user?.coupleCode) {
+      navigator.clipboard.writeText(user.coupleCode);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
   };
 
   /**
@@ -97,17 +119,19 @@ export function Profile() {
             {user?.coupleCode && (
               <div className="mt-6 flex flex-col items-center">
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Seu Código de Parceiro</p>
-                <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-primary/10 shadow-sm">
+                <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-primary/10 shadow-sm relative">
                   <span className="font-mono text-xl font-black text-primary tracking-widest">{user.coupleCode}</span>
                   <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(user.coupleCode || '');
-                      alert('Código copiado!');
-                    }}
-                    className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                    onClick={handleCopyCode}
+                    className={`size-8 rounded-full flex items-center justify-center transition-colors ${copySuccess ? 'bg-green-100 text-green-600' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
                   >
-                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                    <span className="material-symbols-outlined text-sm">{copySuccess ? 'check' : 'content_copy'}</span>
                   </button>
+                  {copySuccess && (
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-md animate-in fade-in slide-in-from-bottom-1">
+                      Copiado!
+                    </div>
+                  )}
                 </div>
                 <p className="text-[10px] text-slate-400 mt-2 max-w-xs">Compartilhe este código com seu parceiro(a) para vincular as contas.</p>
               </div>
@@ -166,7 +190,7 @@ export function Profile() {
               <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
             </button>
 
-            <button onClick={handleLogout} className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all group">
+            <button onClick={openLogoutModal} className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all group">
               <div className="flex items-center gap-4 text-red-600 dark:text-red-400">
                 <div className="size-12 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">logout</span>
@@ -178,6 +202,16 @@ export function Profile() {
           </div>
         </main>
       </div>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title="Sair da Conta"
+        message="Tem certeza que deseja sair da sua conta?"
+        confirmText="Sair"
+        type="danger"
+      />
 
       <BottomNav />
     </div>

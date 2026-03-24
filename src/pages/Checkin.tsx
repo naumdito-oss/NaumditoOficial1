@@ -19,6 +19,7 @@ export function Checkin() {
   const [feeling, setFeeling] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [note, setNote] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   /**
    * Calculates a weekly summary based on the user's check-in history.
@@ -114,13 +115,14 @@ export function Checkin() {
    */
   const handleSave = () => {
     if (!feeling) {
-      alert("Por favor, selecione como você está se sentindo.");
       return;
     }
     
     completeCheckin(feeling, tags, note);
-    alert("Check-in salvo com sucesso! +50 pontos");
-    navigate('/home');
+    setShowSuccess(true);
+    setTimeout(() => {
+      navigate('/home');
+    }, 2000);
   };
 
   /**
@@ -148,6 +150,13 @@ export function Checkin() {
             <span className="material-symbols-outlined text-navy-main dark:text-slate-100">info</span>
           </div>
         </header>
+
+        {showSuccess && (
+          <div className="mx-4 md:mx-8 mt-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl flex items-center gap-3 text-green-700 dark:text-green-400 animate-in fade-in slide-in-from-top-4 duration-300">
+            <span className="material-symbols-outlined">check_circle</span>
+            <p className="font-bold">Check-in salvo com sucesso! +50 pontos</p>
+          </div>
+        )}
 
         <main className="flex-1 px-4 md:px-8 py-6 space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

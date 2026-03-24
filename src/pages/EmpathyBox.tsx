@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 // Components
 import { BottomNav } from '../components/BottomNav';
 import { Modal } from '../components/Modal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // Contexts
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +28,10 @@ export function EmpathyBox() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [selectedVibe, setSelectedVibe] = useState<'fofo' | 'sincero' | 'engracado'>('fofo');
+
+  // State for delete confirmation
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
 
   /**
    * Handles the submission of a new empathy message.
@@ -54,6 +59,27 @@ export function EmpathyBox() {
    */
   const getVibeConfig = (vibeId: string) => {
     return EMPATHY_VIBES.find(v => v.id === vibeId) || EMPATHY_VIBES[0];
+  };
+
+  /**
+   * Opens the delete confirmation modal.
+   * 
+   * @param {string} id - The ID of the message to delete.
+   */
+  const openDeleteModal = (id: string) => {
+    setMessageToDelete(id);
+    setIsConfirmDeleteOpen(true);
+  };
+
+  /**
+   * Handles the actual deletion after confirmation.
+   */
+  const handleConfirmDelete = () => {
+    if (messageToDelete) {
+      removeEmpathyMessage(messageToDelete);
+      setMessageToDelete(null);
+      setIsConfirmDeleteOpen(false);
+    }
   };
 
   return (
@@ -113,7 +139,7 @@ export function EmpathyBox() {
                             <span className="text-[10px] font-bold uppercase tracking-widest">{vibeConfig.label}</span>
                           </div>
                           <button 
-                            onClick={() => removeEmpathyMessage(msg.id)}
+                            onClick={() => openDeleteModal(msg.id)}
                             className="text-slate-300 hover:text-red-500 transition-colors"
                           >
                             <span className="material-symbols-outlined text-xl">delete</span>
@@ -182,6 +208,16 @@ export function EmpathyBox() {
           </button>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmDeleteOpen}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir Mensagem"
+        message="Tem certeza que deseja excluir esta mensagem da caixinha? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        type="danger"
+      />
 
       <BottomNav />
     </div>

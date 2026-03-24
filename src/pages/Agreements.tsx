@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 // Components
 import { BottomNav } from '../components/BottomNav';
 import { Modal } from '../components/Modal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // Contexts
 import { useData } from '../context/DataContext';
@@ -21,9 +22,11 @@ export function Agreements() {
   // State for modals and form inputs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isJustificationModalOpen, setIsJustificationModalOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [newAgreement, setNewAgreement] = useState('');
   const [justification, setJustification] = useState('');
   const [agreementToBreak, setAgreementToBreak] = useState<string | null>(null);
+  const [agreementToDelete, setAgreementToDelete] = useState<string | null>(null);
 
   /**
    * Handles the submission of a new agreement.
@@ -41,17 +44,10 @@ export function Agreements() {
 
   /**
    * Handles marking an agreement as broken with a justification.
-   * Dispatches a custom event to simulate a notification.
    */
   const handleBreakAgreement = () => {
     if (agreementToBreak && justification.trim()) {
       updateAgreement(agreementToBreak, { status: 'broken', justification: justification.trim() });
-      
-      // Trigger notification
-      window.dispatchEvent(new CustomEvent('new_notification', { 
-        detail: { title: 'Acordo Descumprido', message: `Seu parceiro marcou um acordo como descumprido: ${justification.trim()}` }
-      }));
-      
       setJustification('');
       setAgreementToBreak(null);
       setIsJustificationModalOpen(false);
@@ -70,13 +66,22 @@ export function Agreements() {
 
   /**
    * Handles the removal of an agreement after user confirmation.
+   */
+  const handleConfirmDelete = () => {
+    if (agreementToDelete) {
+      removeAgreement(agreementToDelete);
+      setAgreementToDelete(null);
+    }
+  };
+
+  /**
+   * Opens the delete confirmation modal.
    * 
    * @param {string} id - The ID of the agreement to remove.
    */
-  const handleRemoveAgreement = (id: string) => {
-    if (window.confirm("Tem certeza que deseja remover este acordo?")) {
-      removeAgreement(id);
-    }
+  const openDeleteModal = (id: string) => {
+    setAgreementToDelete(id);
+    setIsConfirmDeleteOpen(true);
   };
 
   return (
@@ -143,7 +148,7 @@ export function Agreements() {
                       </button>
                     )}
                     <button 
-                      onClick={() => handleRemoveAgreement(agreement.id)}
+                      onClick={() => openDeleteModal(agreement.id)}
                       className="shrink-0 p-2 text-slate-300 hover:text-red-500 transition-colors"
                     >
                       <span className="material-symbols-outlined">delete</span>
@@ -203,6 +208,17 @@ export function Agreements() {
           </button>
         </div>
       </Modal>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteOpen}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Remover Acordo"
+        message="Tem certeza que deseja remover este acordo? Esta ação não pode ser desfeita."
+        confirmText="Remover"
+        type="danger"
+      />
 
       <BottomNav />
     </div>

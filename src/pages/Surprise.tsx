@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 
 // Components
 import { BottomNav } from '../components/BottomNav';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // Contexts
 import { useData } from '../context/DataContext';
@@ -18,6 +19,8 @@ export function Surprise() {
   const { user, partner } = useAuth();
   const { wishlist, addToWishlist, removeFromWishlist } = useData();
   const [newLink, setNewLink] = useState('');
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const handleAddToWishlist = () => {
     if (newLink && newLink.trim()) {
@@ -26,10 +29,16 @@ export function Surprise() {
     }
   };
 
-  const handleRemoveFromWishlist = (id: string) => {
-    if (window.confirm("Remover este item da wishlist?")) {
-      removeFromWishlist(id);
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      removeFromWishlist(itemToDelete);
+      setItemToDelete(null);
     }
+  };
+
+  const openDeleteModal = (id: string) => {
+    setItemToDelete(id);
+    setIsConfirmDeleteOpen(true);
   };
 
   return (
@@ -120,7 +129,7 @@ export function Surprise() {
                           <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer" className="size-10 flex items-center justify-center rounded-full bg-peach-main/10 text-peach-main hover:scale-110 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">open_in_new</span>
                           </a>
-                          <button onClick={() => handleRemoveFromWishlist(item.id)} className="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all">
+                          <button onClick={() => openDeleteModal(item.id)} className="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all">
                             <span className="material-symbols-outlined text-[20px]">delete</span>
                           </button>
                         </div>
@@ -247,6 +256,17 @@ export function Surprise() {
           </div>
         </main>
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteOpen}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Remover Item"
+        message="Tem certeza que deseja remover este item da sua wishlist?"
+        confirmText="Remover"
+        type="danger"
+      />
 
       <BottomNav />
     </div>

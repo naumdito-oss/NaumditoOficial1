@@ -152,10 +152,9 @@ export function Home() {
   // Get status from centralized logic
   const { label: statusLabel, color: statusColor, percentage: connectionPercentage } = getCoupleStatus();
   
-  // Update weekly progress in real-time
-  useEffect(() => {
-    updateWeeklyProgress(connectionPercentage);
-  }, [connectionPercentage, updateWeeklyProgress]);
+  const isInitialState = useMemo(() => {
+    return weeklyHistory.length === 0 && connectionPercentage < 10;
+  }, [weeklyHistory, connectionPercentage]);
 
   // Check for profile completion
   const userProfile = useMemo(() => {
@@ -311,17 +310,19 @@ export function Home() {
               <div className="flex gap-6 justify-between items-end mb-4">
                 <div className="relative group">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-emerald-main">Status do Casal</p>
+                    <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-emerald-main">Termômetro de Sintonia</p>
                     <span className="material-symbols-outlined text-slate-400 text-sm cursor-help">info</span>
                     
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-0 mb-3 w-72 p-4 bg-navy-main text-white text-[11px] rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-20 leading-relaxed border border-white/10">
-                      <p className="font-bold mb-2 text-emerald-main">Como subir seu status:</p>
+                      <p className="font-bold mb-2 text-emerald-main">Como subir sua sintonia:</p>
                       <ul className="space-y-2">
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Complete o Check-in Diário (+50 pts)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Realize o Micro-gesto do Dia (+10 pts)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Cumpra combinados e permutas</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Mantenha a frequência de uso do app</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Check-ins Diários (+30%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Gesto do Dia & Engajamento (+20%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Compromissos Ativos (+15%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Trocas & Permutas (+15%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Itens na Wishlist (+10%)</li>
+                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Plano de Encontro (+10%)</li>
                       </ul>
                     </div>
                   </div>
@@ -332,36 +333,40 @@ export function Home() {
                 </div>
               </div>
               <div className="h-4 rounded-full bg-primary/10 overflow-hidden mb-4">
-                <div className="h-full rounded-full bg-gradient-to-r from-primary to-peach-main shadow-[0_0_10px_rgba(123,143,214,0.5)]" style={{ width: `${connectionPercentage}%` }}></div>
+                <div className="h-full rounded-full bg-gradient-to-r from-primary to-peach-main shadow-[0_0_10px_rgba(123,143,214,0.5)] transition-all duration-1000" style={{ width: `${connectionPercentage}%` }}></div>
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed mb-8">
-                {user ? `Olá, ${user.name}! ` : ''}Seu barômetro de conexão está <span className="text-navy-main dark:text-white font-bold">{connectionPercentage >= 60 ? 'excelente' : 'precisando de atenção'}</span> esta semana!
+                {isInitialState 
+                  ? "Comece a interagir para ver sua sintonia evoluir ao longo da semana!" 
+                  : `${user?.name || 'Olá'}! Sua sintonia está ${connectionPercentage >= 60 ? 'excelente' : 'em evolução'} esta semana.`}
               </p>
 
-              {/* Evolution Chart */}
-              <div className="mt-6 pt-6 border-t border-primary/5">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Evolução Semanal</h4>
-                <div className="h-40 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorPct" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} domain={[0, 100]} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
-                        itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
-                        formatter={(value: number) => [`${value}%`, 'Conexão']}
-                      />
-                      <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorPct)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+              {/* Evolution Chart - Only show if there is history */}
+              {!isInitialState && weeklyHistory.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-primary/5">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Evolução Semanal</h4>
+                  <div className="h-40 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorPct" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} domain={[0, 100]} />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                          itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
+                          formatter={(value: number) => [`${value}%`, 'Sintonia']}
+                        />
+                        <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorPct)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Micro-gesture */}

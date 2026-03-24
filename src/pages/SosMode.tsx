@@ -25,6 +25,12 @@ export function SosMode() {
 
   // Emergency State
   const [showTimeOutModal, setShowTimeOutModal] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const showFeedback = (type: 'success' | 'error', message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3000);
+  };
 
   const analyzeSentiment = (value: string) => {
     setText(value);
@@ -73,7 +79,7 @@ export function SosMode() {
       }
     } catch (error) {
       console.error("Erro ao refinar:", error);
-      alert("Não foi possível conectar com o Assistente de Mediação agora. Tente novamente.");
+      showFeedback('error', "Não foi possível conectar com o Assistente de Mediação agora. Tente novamente.");
     } finally {
       setIsRefining(false);
     }
@@ -93,8 +99,10 @@ export function SosMode() {
     window.dispatchEvent(new CustomEvent('new_notification', { 
       detail: { title: 'Desabafo Postado', message: 'Seu desabafo foi postado no mural com sucesso.' }
     }));
-    alert('Postado no Mural!');
-    navigate('/home');
+    showFeedback('success', 'Postado no Mural!');
+    setTimeout(() => {
+      navigate('/home');
+    }, 1500);
   };
 
   const handleTimeOut = () => {
@@ -102,7 +110,7 @@ export function SosMode() {
       detail: { title: 'Pedido de Tempo', message: 'Seu parceiro pediu um tempo para se acalmar. Respeite este momento.' }
     }));
     setShowTimeOutModal(false);
-    alert('Notificação de "Tempo" enviada ao seu parceiro.');
+    showFeedback('success', 'Notificação de "Tempo" enviada ao seu parceiro.');
   };
 
   return (
@@ -117,6 +125,17 @@ export function SosMode() {
             <span className="material-symbols-outlined">info</span>
           </div>
         </header>
+
+        {feedback && (
+          <div className={`mx-4 md:mx-8 mt-4 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+            feedback.type === 'success' 
+              ? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' 
+              : 'bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+          }`}>
+            <span className="material-symbols-outlined">{feedback.type === 'success' ? 'check_circle' : 'error'}</span>
+            <p className="font-bold">{feedback.message}</p>
+          </div>
+        )}
 
         <main className="flex-1 px-4 md:px-8 py-6 space-y-8">
           {/* Tabs */}

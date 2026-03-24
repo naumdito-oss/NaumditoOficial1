@@ -19,6 +19,7 @@ import { useData } from '../context/DataContext';
 export function Points() {
   const navigate = useNavigate();
   const { points, level } = useData();
+  const [showFeedback, setShowFeedback] = React.useState(false);
 
   // Level calculation logic (mock)
   const pointsPerLevel = 1000;
@@ -31,7 +32,8 @@ export function Points() {
    * Currently disabled as requested.
    */
   const handleRedeem = () => {
-    alert("Funcionalidade em breve! Estamos fechando parcerias para trazer recompensas reais para você.");
+    setShowFeedback(true);
+    setTimeout(() => setShowFeedback(false), 4000);
   };
 
   return (
@@ -43,6 +45,13 @@ export function Points() {
           </div>
           <h1 className="text-navy-main dark:text-slate-100 text-lg md:text-2xl font-black leading-tight tracking-tighter flex-1 text-center pr-10 uppercase tracking-widest">Pontos de Sintonia</h1>
         </header>
+
+        {showFeedback && (
+          <div className="mt-4 p-4 bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-2xl flex items-center gap-3 text-indigo-700 dark:text-indigo-400 animate-in fade-in slide-in-from-top-4 duration-300">
+            <span className="material-symbols-outlined">info</span>
+            <p className="font-bold">Funcionalidade em breve! Estamos fechando parcerias para trazer recompensas reais para você.</p>
+          </div>
+        )}
 
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
           {/* Left Column: Stats & Progress */}
