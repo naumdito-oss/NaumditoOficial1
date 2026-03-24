@@ -36,6 +36,7 @@ export function Profile() {
    * Opens the logout confirmation modal.
    */
   const openLogoutModal = () => {
+    console.log("Opening logout modal");
     setIsLogoutModalOpen(true);
   };
 
@@ -53,7 +54,8 @@ export function Profile() {
   /**
    * Triggers the hidden file input click event.
    */
-  const handlePhotoClick = () => {
+  const handlePhotoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     fileInputRef.current?.click();
   };
 
