@@ -73,7 +73,14 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background-light dark:bg-background-dark overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-50 dark:bg-background-dark overflow-hidden transition-colors duration-300 relative">
+      
+      {/* Mobile Background Decoration */}
+      <div className="md:hidden absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute top-[-5%] right-[-10%] w-[120vw] h-[120vw] max-w-[500px] max-h-[500px] rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
+        <div className="absolute top-[20%] left-[-20%] w-[100vw] h-[100vw] max-w-[400px] max-h-[400px] rounded-full bg-peach-main/10 dark:bg-peach-main/5 blur-3xl" />
+      </div>
+
       {/* Left Side: Branding/Visual (Desktop Only) */}
       <div className="hidden md:flex md:w-1/2 relative items-center justify-center p-12 overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -83,7 +90,7 @@ export function Login() {
             className="w-full h-full object-cover opacity-30 dark:opacity-50 scale-105"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background-light via-background-light/80 to-transparent dark:from-background-dark dark:via-background-dark/80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-50 via-slate-50/80 to-transparent dark:from-background-dark dark:via-background-dark/80" />
         </div>
         
         <div className="relative z-10 max-w-lg">
@@ -111,60 +118,68 @@ export function Login() {
         </div>
       </div>
 
-      {/* Mobile Top Section (Mobile Only) */}
-      <div className="md:hidden relative h-[35vh] w-full flex flex-col items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1474552226712-ac0f0961a954?q=80&w=1080&auto=format&fit=crop" 
-            alt="Background" 
-            className="w-full h-full object-cover opacity-60 dark:opacity-40"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/80 to-primary dark:from-background-dark/80 dark:to-background-dark" />
-        </div>
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="size-20 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center mb-4 shadow-xl">
+      {/* Right Side: Login Form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 relative z-20 min-h-screen md:min-h-0">
+        
+        {/* Mobile Header */}
+        <div className="md:hidden flex flex-col items-center mb-10 mt-8">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, type: "spring" }}
+            className="size-24 rounded-[2rem] bg-white dark:bg-slate-800 border border-primary/10 dark:border-white/5 flex items-center justify-center mb-6 shadow-xl shadow-primary/5"
+          >
             <img 
               alt="NaumDito Logo" 
-              className="w-12 h-12 object-contain" 
+              className="w-14 h-14 object-contain" 
               src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" 
               referrerPolicy="no-referrer"
             />
-          </div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">NaumDito</h2>
-          <p className="text-white/80 mt-1 font-medium">Conectando corações</p>
+          </motion.div>
+          <motion.h2 
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-3xl font-black text-navy-main dark:text-white tracking-tight"
+          >
+            Bem-vindo de volta
+          </motion.h2>
+          <motion.p 
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-slate-500 dark:text-slate-400 mt-2 font-medium"
+          >
+            Acesse sua conta para continuar
+          </motion.p>
         </div>
-      </div>
 
-      {/* Right Side: Login Form */}
-      <div className="flex-1 flex items-start md:items-center justify-center p-0 md:p-12 relative -mt-6 md:mt-0 z-20">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md bg-white dark:bg-background-dark md:bg-transparent md:dark:bg-transparent rounded-t-[2rem] md:rounded-none p-8 md:p-10 shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.1)] md:shadow-none min-h-[65vh] md:min-h-0 flex flex-col"
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl md:backdrop-blur-none md:bg-transparent md:dark:bg-transparent rounded-[2.5rem] md:rounded-none p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] md:shadow-none border border-white/50 dark:border-white/5 md:border-none"
         >
-          <div className="md:backdrop-blur-xl md:bg-white/80 md:dark:bg-white/5 md:border md:border-primary/10 md:dark:border-white/10 md:rounded-[2rem] md:p-10 md:shadow-2xl flex-1">
+          <div className="md:backdrop-blur-xl md:bg-white/80 md:dark:bg-white/5 md:border md:border-primary/10 md:dark:border-white/10 md:rounded-[2.5rem] md:p-10 md:shadow-2xl flex-1">
             <div className="mb-8 hidden md:block">
               <h1 className="text-3xl font-bold text-navy-main dark:text-white tracking-tight">Entrar</h1>
               <p className="text-slate-500 dark:text-slate-400 mt-2">Acesse sua conta para continuar.</p>
             </div>
-            
-            <div className="mb-8 md:hidden text-center">
-              <h1 className="text-2xl font-bold text-navy-main dark:text-white tracking-tight">Bem-vindo de volta</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Acesse sua conta para continuar.</p>
-            </div>
 
             {error && (
-              <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-3">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 flex items-start gap-3"
+              >
                 <span className="material-symbols-outlined text-red-500 shrink-0">error</span>
                 <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
-              </div>
+              </motion.div>
             )}
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-6">
-              <div className="space-y-2">
-                <label className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest ml-1">E-mail</label>
+            <form onSubmit={handleLogin} className="flex flex-col gap-5">
+              <div className="space-y-1.5">
+                <label className="text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest ml-2">E-mail</label>
                 <div className="relative group">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 group-focus-within:text-primary dark:group-focus-within:text-peach-main transition-colors">mail</span>
                   <input 
@@ -172,15 +187,16 @@ export function Login() {
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-navy-main dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-peach-main/50 focus:border-primary dark:focus:border-peach-main transition-all" 
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 text-navy-main dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-peach-main/20 focus:border-primary dark:focus:border-peach-main transition-all font-medium" 
                     placeholder="seu@email.com" 
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between items-center px-1">
-                  <label className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">Senha</label>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center px-2">
+                  <label className="text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest">Senha</label>
+                  <Link to="/forgot-password" className="text-[11px] font-bold text-primary dark:text-peach-main hover:underline">Esqueceu?</Link>
                 </div>
                 <div className="relative group">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 group-focus-within:text-primary dark:group-focus-within:text-peach-main transition-colors">lock</span>
@@ -189,27 +205,33 @@ export function Login() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-navy-main dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-peach-main/50 focus:border-primary dark:focus:border-peach-main transition-all" 
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 text-navy-main dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-peach-main/20 focus:border-primary dark:focus:border-peach-main transition-all font-medium" 
                     placeholder="••••••••" 
                   />
                 </div>
               </div>
 
               <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit" 
                 disabled={isLoading}
-                className="w-full h-14 mt-2 rounded-2xl bg-primary dark:bg-peach-main text-white dark:text-slate-950 font-bold text-lg shadow-xl shadow-primary/20 dark:shadow-peach-main/20 hover:bg-primary-light dark:hover:bg-peach-light transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                className="w-full h-14 mt-4 rounded-2xl bg-primary dark:bg-peach-main text-white dark:text-slate-900 font-bold text-lg shadow-lg shadow-primary/20 dark:shadow-peach-main/20 hover:bg-primary-light dark:hover:bg-peach-light transition-all flex items-center justify-center gap-2 disabled:opacity-70"
               >
-                {isLoading ? 'Entrando...' : 'Entrar'}
-                <span className="material-symbols-outlined">arrow_forward</span>
+                {isLoading ? (
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                ) : (
+                  <>
+                    Entrar
+                    <span className="material-symbols-outlined">arrow_forward</span>
+                  </>
+                )}
               </motion.button>
             </form>
 
             <div className="mt-8 flex flex-col items-center gap-6">
-              <p className="text-slate-500 dark:text-slate-400 text-sm">
-                Não tem uma conta? <Link to="/register" className="text-primary font-bold hover:underline">Cadastre-se</Link>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                Não tem uma conta? <Link to="/register" className="text-primary dark:text-peach-main font-bold hover:underline">Cadastre-se</Link>
               </p>
             </div>
           </div>

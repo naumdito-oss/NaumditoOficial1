@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => void;
   register: (name: string, email: string, partnerCode?: string, password?: string) => Promise<any>;
   updatePhoto: (file: File) => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   channel: any | null;
   loading: boolean;
@@ -84,6 +85,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
+
+  const refreshUser = async () => {
+    if (user?.id) {
+      await fetchUserProfile(user.id);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.coupleId) return;
+
+    const channel = supabase.channel('auth_profiles_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles', 
+        filter: `couple_id=eq.${user.coupleId}` 
+      }, (payload) => {
+        const newRecord = payload.new as any;
+        if (newRecord && newRecord.id === user.id) {
+          fetchUserProfile(user.id);
+        } else if (newRecord) {
+          fetchPartnerProfile(user.id, user.coupleId);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.coupleId, user?.id]);
 
   const fetchPartnerProfile = async (userId: string, coupleId?: string) => {
     if (!coupleId) return;
@@ -304,7 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, partner, login, logout, register, updatePhoto, isAuthenticated: !!user, channel, loading }}>
+    <AuthContext.Provider value={{ user, partner, login, logout, register, updatePhoto, refreshUser, isAuthenticated: !!user, channel, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

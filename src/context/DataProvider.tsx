@@ -47,7 +47,7 @@ interface DataContextType {
   completeMicroGesture: () => void;
   updateWeeklyProgress: (percentage: number) => void;
   getCoupleStatus: () => { label: string; color: string; percentage: number };
-  recordAchievement: (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'>) => Promise<void>;
+  recordAchievement: (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'> & { claimed?: boolean }) => Promise<void>;
   claimAchievement: (id: string) => Promise<void>;
 }
 
@@ -662,13 +662,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newDailyPoints = dailyPoints + pointsToAdd;
     const newWeeklyPoints = weeklyPoints + pointsToAdd;
 
+    // Optimistically update local state
+    setPoints(newPoints);
+    setDailyPoints(newDailyPoints);
+    setWeeklyPoints(newWeeklyPoints);
+
     const { error } = await supabase.from('profiles').update({
       points: newPoints,
       daily_points: newDailyPoints,
       weekly_points: newWeeklyPoints
     }).eq('id', user.id);
 
-    if (error) console.error('Error updating points:', error);
+    if (error) {
+      console.error('Error updating points:', error);
+      // Revert if failed
+      setPoints(points);
+      setDailyPoints(dailyPoints);
+      setWeeklyPoints(weeklyPoints);
+    }
   };
 
   const completeCheckin = async (feeling: string, tags: string[], note: string) => {
@@ -717,19 +728,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const completeMicroGesture = async () => {
     if (!user?.id) return;
 
-    await supabase.from('profiles').update({
+    // Optimistically update local state
+    setMicroGestureCompleted(true);
+
+    const { error } = await supabase.from('profiles').update({
       micro_gesture_completed: true
     }).eq('id', user.id);
 
+    if (error) {
+      console.error('Error updating micro gesture status:', error);
+      // Revert if failed
+      setMicroGestureCompleted(false);
+      return;
+    }
+
+    // Add points immediately
+    await addPoints(10);
+
+    // Record achievement (already claimed since we gave points)
     await recordAchievement({
       title: 'Gesto do Dia',
       description: 'Você realizou o gesto do dia para o seu par.',
       points: 10,
-      icon: 'favorite'
+      icon: 'favorite',
+      claimed: true
     });
   };
 
-  const recordAchievement = async (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'>) => {
+  const recordAchievement = async (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'> & { claimed?: boolean }) => {
     if (!user?.id || !user?.coupleId) return;
 
     const { error } = await supabase.from('achievements').insert({
@@ -739,7 +765,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       description: achievement.description,
       points: achievement.points,
       icon: achievement.icon,
-      claimed: false
+      claimed: achievement.claimed || false
     });
 
     if (error) console.error('Error recording achievement:', error);

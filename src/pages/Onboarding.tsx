@@ -61,7 +61,7 @@ const INITIAL_DATA: OnboardingData = {
  */
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updatePhoto } = useAuth();
+  const { user, updatePhoto, refreshUser } = useAuth();
   
   // Redirect to login if not authenticated
   React.useEffect(() => {
@@ -163,6 +163,9 @@ export const Onboarding: React.FC = () => {
         if (selectedFile) {
           await updatePhoto(selectedFile);
         }
+        
+        // Refresh user context to immediately remove the incomplete profile alert
+        await refreshUser();
       }
     } catch (e) {
       console.error('Error updating profile in Supabase:', e);
@@ -172,6 +175,7 @@ export const Onboarding: React.FC = () => {
           .from('profiles')
           .update({ name: data.name })
           .eq('id', user!.id);
+        await refreshUser();
       } catch (innerError) {
         console.error('Fallback update failed:', innerError);
       }

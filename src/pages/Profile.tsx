@@ -25,6 +25,7 @@ export function Profile() {
   const [copySuccess, setCopySuccess] = useState(false);
 
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   /**
    * Handles user logout and redirects to the landing page.
@@ -58,7 +59,9 @@ export function Profile() {
    */
   const handlePhotoClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    fileInputRef.current?.click();
+    if (!isUploading) {
+      fileInputRef.current?.click();
+    }
   };
 
   /**
@@ -71,10 +74,13 @@ export function Profile() {
     const file = e.target.files?.[0];
     if (file) {
       setError('');
+      setIsUploading(true);
       try {
         await updatePhoto(file);
       } catch (err: any) {
         setError(err.message || 'Erro ao atualizar a foto.');
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -106,16 +112,23 @@ export function Profile() {
 
           {/* User Info Section */}
           <div className="flex flex-col items-center text-center">
-            <div className="size-32 md:size-40 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative group overflow-hidden cursor-pointer" onClick={handlePhotoClick}>
+            <div className={`size-32 md:size-40 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative group overflow-hidden ${isUploading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`} onClick={handlePhotoClick}>
               <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse"></div>
-              {user?.photoUrl ? (
+              {isUploading ? (
+                <div className="flex flex-col items-center justify-center z-10">
+                  <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+                  <span className="text-[10px] font-bold text-primary mt-2 uppercase tracking-widest">Enviando...</span>
+                </div>
+              ) : user?.photoUrl ? (
                 <img src={user.photoUrl} alt="Profile" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
               ) : (
                 <span className="material-symbols-outlined text-6xl md:text-7xl text-primary">person</span>
               )}
-              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
-                <span className="material-symbols-outlined text-white text-3xl drop-shadow-md">edit</span>
-              </div>
+              {!isUploading && (
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                  <span className="material-symbols-outlined text-white text-3xl drop-shadow-md">edit</span>
+                </div>
+              )}
             </div>
             <input 
               type="file" 
@@ -123,6 +136,7 @@ export function Profile() {
               onChange={handlePhotoChange} 
               accept="image/*" 
               className="hidden" 
+              disabled={isUploading}
             />
 
             
@@ -207,7 +221,7 @@ export function Profile() {
               <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
             </button>
 
-            <button onClick={openLogoutModal} className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 md:hover:bg-red-100 dark:md:hover:bg-red-900/20 transition-all group active:scale-[0.98]">
+            <button onClick={handleLogout} className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 md:hover:bg-red-100 dark:md:hover:bg-red-900/20 transition-all group active:scale-[0.98]">
               <div className="flex items-center gap-4 text-red-600 dark:text-red-400">
                 <div className="size-12 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">logout</span>
@@ -219,16 +233,6 @@ export function Profile() {
           </div>
         </main>
       </div>
-
-      <ConfirmModal
-        isOpen={isLogoutModalOpen}
-        onClose={() => setIsLogoutModalOpen(false)}
-        onConfirm={handleLogout}
-        title="Sair da Conta"
-        message="Tem certeza que deseja sair da sua conta?"
-        confirmText="Sair"
-        type="danger"
-      />
 
       <BottomNav />
     </div>
