@@ -1,6 +1,6 @@
 import { supabase } from '../config/supabase';
 
-export type NotificationType = 'event' | 'wishlist' | 'checkin' | 'exchange' | 'system';
+export type NotificationType = 'event' | 'wishlist' | 'checkin' | 'exchange' | 'system' | 'achievement';
 
 export interface Notification {
   id: string;

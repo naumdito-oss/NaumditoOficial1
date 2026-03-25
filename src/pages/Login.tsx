@@ -26,7 +26,7 @@ const translateAuthError = (msg: string) => {
  */
 export function Login() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   
   // Form state
   const [email, setEmail] = useState('');
@@ -36,7 +36,7 @@ export function Login() {
 
   // Redirect to home or onboarding if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
       const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
       if (onboardingCompleted) {
         navigate('/home');
@@ -44,7 +44,7 @@ export function Login() {
         navigate('/onboarding');
       }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
 
   /**
    * Handles the login form submission.
@@ -75,10 +75,15 @@ export function Login() {
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-50 dark:bg-background-dark overflow-hidden transition-colors duration-300 relative">
       
-      {/* Mobile Background Decoration */}
-      <div className="md:hidden absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute top-[-5%] right-[-10%] w-[120vw] h-[120vw] max-w-[500px] max-h-[500px] rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
-        <div className="absolute top-[20%] left-[-20%] w-[100vw] h-[100vw] max-w-[400px] max-h-[400px] rounded-full bg-peach-main/10 dark:bg-peach-main/5 blur-3xl" />
+      {/* Mobile Background Image & Decoration */}
+      <div className="md:hidden absolute inset-0 z-0">
+        <img 
+          src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1080&auto=format&fit=crop" 
+          alt="Couple" 
+          className="w-full h-full object-cover opacity-80 dark:opacity-60"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy-main/60 via-navy-main/40 to-slate-50 dark:from-background-dark/80 dark:via-background-dark/60 dark:to-background-dark" />
       </div>
 
       {/* Left Side: Branding/Visual (Desktop Only) */}
@@ -127,11 +132,11 @@ export function Login() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, type: "spring" }}
-            className="size-24 rounded-[2rem] bg-white dark:bg-slate-800 border border-primary/10 dark:border-white/5 flex items-center justify-center mb-6 shadow-xl shadow-primary/5"
+            className="size-24 rounded-[2rem] bg-white/20 dark:bg-slate-800/50 backdrop-blur-md border border-white/30 dark:border-white/10 flex items-center justify-center mb-6 shadow-2xl"
           >
             <img 
               alt="NaumDito Logo" 
-              className="w-14 h-14 object-contain" 
+              className="w-14 h-14 object-contain drop-shadow-lg" 
               src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" 
               referrerPolicy="no-referrer"
             />
@@ -140,7 +145,7 @@ export function Login() {
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl font-black text-navy-main dark:text-white tracking-tight"
+            className="text-3xl font-black text-white tracking-tight drop-shadow-md"
           >
             Bem-vindo de volta
           </motion.h2>
@@ -148,7 +153,7 @@ export function Login() {
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-slate-500 dark:text-slate-400 mt-2 font-medium"
+            className="text-white/80 mt-2 font-medium drop-shadow-sm"
           >
             Acesse sua conta para continuar
           </motion.p>
@@ -158,7 +163,7 @@ export function Login() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl md:backdrop-blur-none md:bg-transparent md:dark:bg-transparent rounded-[2.5rem] md:rounded-none p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] md:shadow-none border border-white/50 dark:border-white/5 md:border-none"
+          className="w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl md:backdrop-blur-none md:bg-transparent md:dark:bg-transparent rounded-[2.5rem] md:rounded-none p-8 shadow-[0_8px_30px_rgb(0,0,0,0.1)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] md:shadow-none border border-white/50 dark:border-white/10 md:border-none"
         >
           <div className="md:backdrop-blur-xl md:bg-white/80 md:dark:bg-white/5 md:border md:border-primary/10 md:dark:border-white/10 md:rounded-[2.5rem] md:p-10 md:shadow-2xl flex-1">
             <div className="mb-8 hidden md:block">

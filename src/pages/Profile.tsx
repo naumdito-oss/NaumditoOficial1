@@ -30,9 +30,9 @@ export function Profile() {
   /**
    * Handles user logout and redirects to the landing page.
    */
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   /**

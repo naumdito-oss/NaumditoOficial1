@@ -284,10 +284,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Logs out the current user and clears session data.
    */
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setPartner(null);
-    setChannel(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error during Supabase signOut:', error);
+    } finally {
+      setUser(null);
+      setPartner(null);
+      setChannel(null);
+    }
   };
 
   /**

@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Components
 import { BottomNav } from '../components/layout/BottomNav';
+import { ConnectionModal } from '../components/modals/ConnectionModal';
+import { PointsModal } from '../components/modals/PointsModal';
 
 // Contexts
 import { useData } from '../context/DataProvider';
@@ -34,16 +37,21 @@ export function Home() {
     completeMicroGesture, 
     weeklyHistory, 
     updateWeeklyProgress, 
-    getCoupleStatus 
+    getCoupleStatus,
+    pointsModal,
+    setPointsModal
   } = useData();
 
   const [dbGesture, setDbGesture] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [partnerProfile, setPartnerProfile] = useState<any>(null);
+  const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const [isCompletingGesture, setIsCompletingGesture] = useState(false);
+  const [showDoneMessage, setShowDoneMessage] = useState(false);
 
   /**
    * Calculates the "Gesture of the Day" based on the current day of the year.
-   * This ensures the gesture changes daily and cycles through the available list.
+   * To ensure different gestures for each partner, we use the user's ID to determine an offset.
    */
   const gestureOfTheDay = useMemo(() => {
     if (dbGesture) return dbGesture;
@@ -54,19 +62,39 @@ export function Home() {
     const oneDay = 1000 * 60 * 60 * 24;
     const dayOfYear = Math.floor(diff / oneDay);
     
-    const index = dayOfYear % microGestures.length;
+    // Determine offset by comparing user ID with partner ID if available
+    // This ensures one partner gets offset 0 and the other gets offset 1
+    let userOffset = 0;
+    if (user?.id && partnerProfile?.id) {
+      userOffset = user.id < partnerProfile.id ? 0 : 1;
+    } else if (user?.id) {
+      // Fallback to ID hash if partner not loaded yet
+      userOffset = user.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 2;
+    }
+    
+    const index = (dayOfYear + userOffset) % microGestures.length;
     return microGestures[index];
-  }, [dbGesture]);
+  }, [dbGesture, user?.id, partnerProfile?.id]);
 
   // Fetch gesture and notifications
   useEffect(() => {
     const fetchGesture = async () => {
+      if (!user?.id) return;
       try {
         const today = new Date();
         const start = new Date(today.getFullYear(), 0, 0);
         const diff = today.getTime() - start.getTime();
         const oneDay = 1000 * 60 * 60 * 24;
         const dayOfYear = Math.floor(diff / oneDay);
+        
+        // Determine offset by comparing user ID with partner ID if available
+        let userOffset = 0;
+        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+        if (partnerId) {
+          userOffset = user.id < partnerId ? 0 : 1;
+        } else {
+          userOffset = user.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 2;
+        }
         
         // We assume there are 50 gestures in the DB, or we get the count
         const { count, error: countError } = await supabase
@@ -76,7 +104,7 @@ export function Home() {
         if (countError) throw countError;
         
         if (count && count > 0) {
-          const index = dayOfYear % count;
+          const index = (dayOfYear + userOffset) % count;
           
           const { data, error } = await supabase
             .from('micro_gestures')
@@ -213,6 +241,28 @@ export function Home() {
 
   const fallbackImageUrl = 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop';
 
+  /**
+   * Handles the completion of the micro-gesture with loading state.
+   */
+  const handleCompleteGesture = async () => {
+    if (isCompletingGesture) return;
+    
+    if (microGestureCompleted) {
+      setShowDoneMessage(true);
+      setTimeout(() => setShowDoneMessage(false), 2000);
+      return;
+    }
+
+    setIsCompletingGesture(true);
+    try {
+      await completeMicroGesture();
+    } catch (err) {
+      console.error('Error completing gesture:', err);
+    } finally {
+      setIsCompletingGesture(false);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">
       <div className="w-full max-w-6xl mx-auto px-4 md:px-8">
@@ -314,20 +364,12 @@ export function Home() {
                 <div className="relative group">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-emerald-main">Termômetro de Sintonia</p>
-                    <span className="material-symbols-outlined text-slate-400 text-sm cursor-help">info</span>
-                    
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full left-0 mb-3 w-72 p-4 bg-navy-main text-white text-[11px] rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-20 leading-relaxed border border-white/10">
-                      <p className="font-bold mb-2 text-emerald-main">Como subir sua sintonia:</p>
-                      <ul className="space-y-2">
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Check-ins Diários (+30%)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Gesto do Dia & Engajamento (+20%)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Compromissos Ativos (+15%)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Trocas & Permutas (+15%)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Itens na Wishlist (+10%)</li>
-                        <li className="flex items-center gap-2"><span className="size-1 bg-emerald-main rounded-full"></span>Plano de Encontro (+10%)</li>
-                      </ul>
-                    </div>
+                    <button 
+                      onClick={() => setIsConnectionModalOpen(true)}
+                      className="material-symbols-outlined text-slate-400 text-sm hover:text-primary transition-colors"
+                    >
+                      info
+                    </button>
                   </div>
                   <p className={`text-2xl md:text-4xl font-black leading-tight tracking-tighter ${statusColor}`}>{statusLabel}</p>
                 </div>
@@ -389,17 +431,46 @@ export function Home() {
                   </div>
                   <h3 className="text-navy-main dark:text-slate-100 text-xl md:text-2xl font-black leading-tight mb-3">{gestureOfTheDay.title}</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base leading-relaxed mb-6">{gestureOfTheDay.description}</p>
-                  <button 
-                    onClick={completeMicroGesture}
-                    disabled={microGestureCompleted}
-                    className={`w-full md:w-fit flex items-center justify-center rounded-2xl h-14 px-8 text-white font-bold shadow-xl transition-all ${
-                      microGestureCompleted 
-                        ? 'bg-slate-400 cursor-not-allowed' 
-                        : 'bg-navy-main hover:bg-navy-main/90 active:scale-95 shadow-navy-main/20'
-                    }`}
-                  >
-                    {microGestureCompleted ? 'Gesto Concluído!' : 'Marcar como Feito'}
-                  </button>
+                  <div className="relative inline-block w-full md:w-fit">
+                    <AnimatePresence>
+                      {showDoneMessage && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute -top-12 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-50 whitespace-nowrap"
+                        >
+                          Gesto já concluído hoje!
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <button 
+                      onClick={handleCompleteGesture}
+                      disabled={isCompletingGesture || microGestureCompleted}
+                      className={`w-full md:w-fit flex items-center justify-center gap-2 rounded-2xl h-14 px-8 text-white font-bold shadow-xl transition-all ${
+                        (microGestureCompleted || isCompletingGesture) 
+                          ? 'bg-emerald-500 shadow-emerald-500/20 cursor-default' 
+                          : 'bg-navy-main hover:bg-navy-main/90 active:scale-95 shadow-navy-main/20'
+                      }`}
+                    >
+                      {isCompletingGesture ? (
+                        <>
+                          <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          Processando...
+                        </>
+                      ) : microGestureCompleted ? (
+                        <>
+                          <span className="material-symbols-outlined text-xl">check_circle</span>
+                          Gesto Concluído!
+                        </>
+                      ) : (
+                        <>
+                          Marcar como Feito
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -452,7 +523,7 @@ export function Home() {
               
               <Link 
                 to="/checkin" 
-                className={`relative z-10 px-8 py-4 rounded-2xl font-bold text-base shadow-xl transition-all ${
+                className={`relative z-10 px-8 py-4 rounded-2xl font-bold text-base shadow-xl transition-all flex items-center gap-2 ${
                   checkinCompleted 
                     ? 'bg-white/20 text-white cursor-default' 
                     : 'bg-white text-primary hover:scale-105 active:scale-95'
@@ -465,6 +536,19 @@ export function Home() {
           </div>
         </div>
       </div>
+
+      <ConnectionModal 
+        isOpen={isConnectionModalOpen} 
+        onClose={() => setIsConnectionModalOpen(false)} 
+        percentage={connectionPercentage} 
+      />
+
+      <PointsModal
+        isOpen={pointsModal.isOpen}
+        onClose={() => setPointsModal({ ...pointsModal, isOpen: false })}
+        points={pointsModal.points}
+        reason={pointsModal.reason}
+      />
 
       <BottomNav />
     </div>

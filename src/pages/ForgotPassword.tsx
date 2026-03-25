@@ -21,15 +21,20 @@ export function ForgotPassword() {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-background-dark overflow-hidden transition-colors duration-300 relative p-6">
       
-      {/* Background Decoration */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute top-[-5%] right-[-10%] w-[120vw] h-[120vw] max-w-[500px] max-h-[500px] rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
-        <div className="absolute top-[20%] left-[-20%] w-[100vw] h-[100vw] max-w-[400px] max-h-[400px] rounded-full bg-peach-main/10 dark:bg-peach-main/5 blur-3xl" />
+      {/* Background Image & Decoration */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1080&auto=format&fit=crop" 
+          alt="Couple" 
+          className="w-full h-full object-cover opacity-80 dark:opacity-60"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy-main/60 via-navy-main/40 to-slate-50 dark:from-background-dark/80 dark:via-background-dark/60 dark:to-background-dark" />
       </div>
 
       <div className="relative z-20 w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <button onClick={() => navigate(-1)} className="absolute top-0 left-0 text-navy-main dark:text-white flex size-10 items-center justify-center bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 rounded-full transition-colors z-20 backdrop-blur-md">
+          <button onClick={() => navigate(-1)} className="absolute top-0 left-0 text-white flex size-10 items-center justify-center bg-white/20 dark:bg-white/10 hover:bg-white/30 dark:hover:bg-white/20 rounded-full transition-colors z-20 backdrop-blur-md">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           
@@ -37,15 +42,15 @@ export function ForgotPassword() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, type: "spring" }}
-            className="size-20 rounded-[1.5rem] bg-white dark:bg-slate-800 border border-primary/10 dark:border-white/5 flex items-center justify-center mb-6 shadow-xl shadow-primary/5 mt-12"
+            className="size-20 rounded-[1.5rem] bg-white/20 dark:bg-slate-800/50 backdrop-blur-md border border-white/30 dark:border-white/10 flex items-center justify-center mb-6 shadow-2xl mt-12"
           >
-            <span className="material-symbols-outlined text-4xl text-primary dark:text-peach-main">lock_reset</span>
+            <span className="material-symbols-outlined text-4xl text-white drop-shadow-lg">lock_reset</span>
           </motion.div>
           <motion.h2 
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl font-black text-navy-main dark:text-white tracking-tight text-center"
+            className="text-3xl font-black text-white tracking-tight text-center drop-shadow-md"
           >
             Recuperar senha
           </motion.h2>
@@ -53,7 +58,7 @@ export function ForgotPassword() {
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-center"
+            className="text-white/80 mt-2 font-medium text-center drop-shadow-sm"
           >
             Digite seu e-mail para receber as instruções de redefinição.
           </motion.p>
@@ -63,7 +68,7 @@ export function ForgotPassword() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/50 dark:border-white/5"
+          className="w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.1)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] border border-white/50 dark:border-white/10"
         >
           <form onSubmit={handleReset} className="flex flex-col gap-5">
             <div className="space-y-1.5">

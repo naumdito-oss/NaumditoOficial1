@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider } from './context/DataProvider';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Pages - Authentication & Onboarding
 import { Intro } from './pages/Intro';
@@ -57,22 +58,22 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             
             {/* Protected/App Routes */}
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/agreements" element={<Agreements />} />
-            <Route path="/sos" element={<SosMode />} />
-            <Route path="/exchanges" element={<Exchanges />} />
-            <Route path="/points" element={<Points />} />
-            <Route path="/surprise" element={<Surprise />} />
-            <Route path="/checkin" element={<Checkin />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/integrations" element={<Integrations />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/empathy-box" element={<EmpathyBox />} />
-            <Route path="/next-date" element={<SaiaDaRotina />} />
-            <Route path="/admin-gestures" element={<AdminGestures />} />
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/agreements" element={<ProtectedRoute><Agreements /></ProtectedRoute>} />
+            <Route path="/sos" element={<ProtectedRoute><SosMode /></ProtectedRoute>} />
+            <Route path="/exchanges" element={<ProtectedRoute><Exchanges /></ProtectedRoute>} />
+            <Route path="/points" element={<ProtectedRoute><Points /></ProtectedRoute>} />
+            <Route path="/surprise" element={<ProtectedRoute><Surprise /></ProtectedRoute>} />
+            <Route path="/checkin" element={<ProtectedRoute><Checkin /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
+            <Route path="/empathy-box" element={<ProtectedRoute><EmpathyBox /></ProtectedRoute>} />
+            <Route path="/next-date" element={<ProtectedRoute><SaiaDaRotina /></ProtectedRoute>} />
+            <Route path="/admin-gestures" element={<ProtectedRoute><AdminGestures /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </DataProvider>

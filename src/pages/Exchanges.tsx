@@ -221,13 +221,23 @@ export function Exchanges() {
                           {/* Actions */}
                           <div className="mt-4 flex gap-3">
                             {exchange.status === 'pending' && (
-                              <button 
-                                onClick={() => handleOpenCounterModal(exchange.id)}
-                                className="flex-1 bg-navy-main text-white text-xs font-bold py-3 rounded-xl hover:bg-navy-main/90 transition-colors flex items-center justify-center gap-2"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">reply</span>
-                                Fazer Contraproposta
-                              </button>
+                              <>
+                                <button 
+                                  onClick={() => handleOpenCounterModal(exchange.id)}
+                                  className="flex-1 bg-navy-main text-white text-xs font-bold py-3 rounded-xl hover:bg-navy-main/90 transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">reply</span>
+                                  Fazer Contraproposta
+                                </button>
+                                {/* Allow accepting directly if testing alone or just for convenience */}
+                                <button 
+                                  onClick={() => handleAcceptAgreement(exchange.id)}
+                                  className="flex-1 bg-emerald-500 text-white text-xs font-bold py-3 rounded-xl hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                  Aceitar Direto
+                                </button>
+                              </>
                             )}
                             
                             {exchange.status === 'counter_proposed' && (
@@ -237,6 +247,16 @@ export function Exchanges() {
                               >
                                 <span className="material-symbols-outlined text-[18px]">check_circle</span>
                                 Aceitar Acordo
+                              </button>
+                            )}
+
+                            {exchange.status === 'accepted' && (
+                              <button 
+                                onClick={() => updateExchange(exchange.id, { status: 'completed' })}
+                                className="flex-1 bg-navy-main text-white text-xs font-bold py-3 rounded-xl hover:bg-navy-main/90 transition-colors flex items-center justify-center gap-2"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">verified</span>
+                                Marcar como Realizado
                               </button>
                             )}
                           </div>

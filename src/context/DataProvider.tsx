@@ -49,6 +49,9 @@ interface DataContextType {
   getCoupleStatus: () => { label: string; color: string; percentage: number };
   recordAchievement: (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'> & { claimed?: boolean }) => Promise<void>;
   claimAchievement: (id: string) => Promise<void>;
+  pointsModal: { isOpen: boolean; points: number; reason: string };
+  setPointsModal: (modal: { isOpen: boolean; points: number; reason: string }) => void;
+  showPoints: (points: number, reason: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -70,6 +73,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyProgress[]>([]);
   const [checkinHistory, setCheckinHistory] = useState<CheckinHistoryItem[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [pointsModal, setPointsModal] = useState({ isOpen: false, points: 0, reason: '' });
+  const isUpdatingProfileRef = useRef(false);
+
+  const showPoints = (points: number, reason: string) => {
+    setPointsModal({ isOpen: true, points, reason });
+  };
   const [currentWeekProgress, setCurrentWeekProgress] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS);
     return stored ? parseInt(stored, 10) : 0;
@@ -143,7 +152,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           .eq('id', user.id)
           .single();
 
-        if (profile) {
+        if (profile && !isUpdatingProfileRef.current) {
           setPoints(profile.points || 0);
           setLevel(profile.level || 1);
           setWeeklyPoints(profile.weekly_points || 0);
@@ -585,11 +594,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Add points
+    const pointsToAdd = 20;
+    await addPoints(pointsToAdd);
+    showPoints(pointsToAdd, `Item Adicionado: ${title}`);
+
     await recordAchievement({
       title: 'Desejo Adicionado',
       description: `Você adicionou "${title}" à lista de desejos.`,
-      points: 20,
-      icon: 'card_giftcard'
+      points: pointsToAdd,
+      icon: 'card_giftcard',
+      claimed: true
     });
 
     // Notify partner
@@ -645,12 +660,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }, { onConflict: 'couple_id' });
 
     if (error) console.error('Error updating next date plan:', error);
+    
+    // Add points
+    const pointsToAdd = 40;
+    await addPoints(pointsToAdd);
+    showPoints(pointsToAdd, 'Encontro Planejado!');
 
     await recordAchievement({
       title: 'Encontro Planejado',
       description: `Você atualizou o plano para o próximo encontro: ${plan.title}`,
-      points: 40,
-      icon: 'calendar_month'
+      points: pointsToAdd,
+      icon: 'calendar_month',
+      claimed: true
     });
   };
 
@@ -703,6 +724,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       checkin_completed: true
     }).eq('id', user.id);
 
+    // Update points
+    const pointsToAdd = 50;
+    await addPoints(pointsToAdd);
+    showPoints(pointsToAdd, 'Check-in Diário Concluído!');
+
     await recordAchievement({
       title: 'Check-in Diário',
       description: 'Você realizou o check-in emocional de hoje.',
@@ -726,33 +752,90 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const completeMicroGesture = async () => {
-    if (!user?.id) return;
-
-    // Optimistically update local state
-    setMicroGestureCompleted(true);
-
-    const { error } = await supabase.from('profiles').update({
-      micro_gesture_completed: true
-    }).eq('id', user.id);
-
-    if (error) {
-      console.error('Error updating micro gesture status:', error);
-      // Revert if failed
-      setMicroGestureCompleted(false);
+    if (!user?.id || !user?.coupleId || microGestureCompleted) {
+      console.log('Cannot complete micro-gesture:', { userId: user?.id, coupleId: user?.coupleId, microGestureCompleted });
       return;
     }
 
-    // Add points immediately
-    await addPoints(10);
+    // Optimistically update local state
+    setMicroGestureCompleted(true);
+    isUpdatingProfileRef.current = true;
 
-    // Record achievement (already claimed since we gave points)
-    await recordAchievement({
-      title: 'Gesto do Dia',
-      description: 'Você realizou o gesto do dia para o seu par.',
-      points: 10,
-      icon: 'favorite',
-      claimed: true
-    });
+    try {
+      // Fetch current profile to get latest points and avoid race conditions
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('points, daily_points, weekly_points')
+        .eq('id', user.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+
+      const currentPoints = profile?.points || 0;
+      const currentDailyPoints = profile?.daily_points || 0;
+      const currentWeeklyPoints = profile?.weekly_points || 0;
+
+      // Calculate points to add
+      const pointsToAdd = Math.min(10, DAILY_POINTS_CAP - currentDailyPoints);
+      const newPoints = currentPoints + pointsToAdd;
+      const newDailyPoints = currentDailyPoints + pointsToAdd;
+      const newWeeklyPoints = currentWeeklyPoints + pointsToAdd;
+
+      console.log('Updating micro-gesture status and points:', { pointsToAdd, newPoints });
+
+      // Single update for all profile fields
+      const { error } = await supabase.from('profiles').update({
+        micro_gesture_completed: true,
+        points: newPoints,
+        daily_points: newDailyPoints,
+        weekly_points: newWeeklyPoints
+      }).eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local points state
+      setPoints(newPoints);
+      setDailyPoints(newDailyPoints);
+      setWeeklyPoints(newWeeklyPoints);
+
+      // Show points modal
+      if (pointsToAdd > 0) {
+        showPoints(pointsToAdd, 'Gesto do Dia Concluído!');
+      } else {
+        // Still show a success message even if points are capped
+        showPoints(0, 'Gesto do Dia Concluído! (Limite diário atingido)');
+      }
+
+      // Record achievement
+      await recordAchievement({
+        title: 'Gesto do Dia',
+        description: 'Você realizou o gesto do dia para o seu par.',
+        points: pointsToAdd,
+        icon: 'favorite',
+        claimed: true
+      });
+
+      // Notify partner
+      const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+      if (partnerId) {
+        await notificationService.createNotification({
+          user_id: partnerId,
+          type: 'achievement',
+          title: 'Gesto de Carinho!',
+          description: `Seu par acabou de realizar o gesto do dia para você.`,
+          icon: 'favorite',
+          color: 'bg-pink-500',
+          link: '/home'
+        });
+      }
+    } catch (error) {
+      console.error('Error updating micro gesture status:', error);
+      // Revert local state if failed
+      setMicroGestureCompleted(false);
+      throw error;
+    } finally {
+      isUpdatingProfileRef.current = false;
+    }
   };
 
   const recordAchievement = async (achievement: Omit<Achievement, 'id' | 'createdAt' | 'claimed'> & { claimed?: boolean }) => {
@@ -788,6 +871,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
 
     await addPoints(achievement.points);
+    showPoints(achievement.points, `Conquista: ${achievement.title}`);
   };
 
   /**
@@ -839,7 +923,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       recordAchievement,
       claimAchievement,
       updateWeeklyProgress,
-      getCoupleStatus
+      getCoupleStatus,
+      pointsModal,
+      setPointsModal,
+      showPoints
     }}>
       {children}
     </DataContext.Provider>

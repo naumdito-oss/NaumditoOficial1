@@ -100,60 +100,105 @@ export function Agreements() {
 
         <div className="p-4 md:p-8">
           <div className="flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-slate-900 dark:text-slate-100 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Ativos</h3>
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center justify-center gap-2 bg-navy-main text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-navy-main/20 active:scale-95 transition-all hover:bg-navy-main/90"
-              >
-                <span className="material-symbols-outlined text-lg">add_circle</span>
-                Novo Combinado
-              </button>
-            </div>
-            <div className="flex flex-col gap-3">
-              {agreements.length === 0 ? (
-                <div className="text-center bg-white dark:bg-slate-900/20 rounded-3xl p-12 border border-dashed border-slate-200 dark:border-slate-800">
-                  <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-800 mb-4">handshake</span>
-                  <p className="text-slate-500">Nenhum acordo criado ainda.</p>
-                </div>
-              ) : (
-                agreements.map((agreement) => (
-                  <motion.div 
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key={agreement.id} 
-                    className="flex items-center gap-4 bg-white dark:bg-slate-900/20 p-5 rounded-2xl border border-transparent hover:border-primary/20 hover:shadow-md transition-all group"
+            <div className="flex flex-col gap-8">
+              {/* Active Agreements Section */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-slate-900 dark:text-slate-100 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Ativos</h3>
+                  <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center justify-center gap-2 bg-navy-main text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-navy-main/20 active:scale-95 transition-all hover:bg-navy-main/90"
                   >
-                    <div className="flex items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0 size-12 group-hover:bg-primary group-hover:text-white transition-colors">
-                      <span className="material-symbols-outlined">handshake</span>
+                    <span className="material-symbols-outlined text-lg">add_circle</span>
+                    Novo Combinado
+                  </button>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                  {agreements.filter(a => a.status === 'active').length === 0 ? (
+                    <div className="text-center bg-white dark:bg-slate-900/20 rounded-3xl p-8 border border-dashed border-slate-200 dark:border-slate-800">
+                      <p className="text-slate-500 text-sm">Nenhum acordo ativo no momento.</p>
                     </div>
-                    <div className="flex flex-col flex-1 justify-center">
-                      <p className="text-slate-900 dark:text-slate-100 text-base font-bold leading-tight mb-1">{agreement.text}</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`size-2 rounded-full ${agreement.status === 'active' ? 'bg-peach-500' : 'bg-red-500'}`} />
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${agreement.status === 'active' ? 'text-peach-500 dark:text-peach-400' : 'text-red-500 dark:text-red-400'}`}>
-                          Status: {agreement.status === 'active' ? 'ATIVO' : 'DESCUMPRIDO'}
-                        </p>
-                      </div>
-                    </div>
-                    {agreement.status === 'active' && (
-                      <button 
-                        onClick={() => openJustificationModal(agreement.id)}
-                        className="shrink-0 p-2 text-slate-300 hover:text-red-500 transition-colors"
-                        title="Marcar como descumprido"
+                  ) : (
+                    agreements.filter(a => a.status === 'active').map((agreement) => (
+                      <motion.div 
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={agreement.id} 
+                        className="flex items-center gap-4 bg-white dark:bg-slate-900/20 p-5 rounded-2xl border border-transparent hover:border-primary/20 hover:shadow-md transition-all group"
                       >
-                        <span className="material-symbols-outlined">warning</span>
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => openDeleteModal(agreement.id)}
-                      className="shrink-0 p-2 text-slate-300 hover:text-red-500 transition-colors"
-                    >
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </motion.div>
-                ))
+                        <div className="flex items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0 size-12 group-hover:bg-primary group-hover:text-white transition-colors">
+                          <span className="material-symbols-outlined">handshake</span>
+                        </div>
+                        <div className="flex flex-col flex-1 justify-center">
+                          <p className="text-slate-900 dark:text-slate-100 text-base font-bold leading-tight mb-1">{agreement.text}</p>
+                          <div className="flex items-center gap-1.5">
+                            <span className="size-2 rounded-full bg-peach-500" />
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-peach-500 dark:text-peach-400">
+                              Status: ATIVO
+                            </p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => openJustificationModal(agreement.id)}
+                          className="shrink-0 p-2 text-slate-300 hover:text-red-500 transition-colors"
+                          title="Marcar como descumprido"
+                        >
+                          <span className="material-symbols-outlined">warning</span>
+                        </button>
+                        <button 
+                          onClick={() => openDeleteModal(agreement.id)}
+                          className="shrink-0 p-2 text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Broken Agreements Section */}
+              {agreements.some(a => a.status === 'broken') && (
+                <div className="space-y-4">
+                  <h3 className="text-red-500 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Descumpridos</h3>
+                  <div className="flex flex-col gap-3">
+                    {agreements.filter(a => a.status === 'broken').map((agreement) => (
+                      <motion.div 
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={agreement.id} 
+                        className="flex items-center gap-4 bg-red-50/50 dark:bg-red-900/10 p-5 rounded-2xl border border-red-100 dark:border-red-900/20 group"
+                      >
+                        <div className="flex items-center justify-center rounded-2xl bg-red-100 text-red-500 shrink-0 size-12">
+                          <span className="material-symbols-outlined">warning</span>
+                        </div>
+                        <div className="flex flex-col flex-1 justify-center">
+                          <p className="text-slate-900 dark:text-slate-100 text-base font-bold leading-tight mb-1 line-through opacity-60">{agreement.text}</p>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="size-2 rounded-full bg-red-500" />
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-red-500">
+                                Status: DESCUMPRIDO
+                              </p>
+                            </div>
+                            {agreement.justification && (
+                              <p className="text-xs text-slate-500 italic">"{agreement.justification}"</p>
+                            )}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => openDeleteModal(agreement.id)}
+                          className="shrink-0 p-2 text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>
