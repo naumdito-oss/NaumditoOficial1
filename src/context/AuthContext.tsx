@@ -11,7 +11,7 @@ interface AuthContextType {
   login: (email: string, password?: string) => Promise<void>;
   logout: () => void;
   register: (name: string, email: string, partnerCode?: string, password?: string) => Promise<any>;
-  updatePhoto: (file: File) => void;
+  updatePhoto: (file: File) => Promise<void>;
   isAuthenticated: boolean;
   channel: any | null;
   loading: boolean;
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Authenticates a user with email and password.
    */
   const login = async (email: string, password?: string) => {
-    if (!password) throw new Error('Password is required');
+    if (!password) throw new Error('A senha é obrigatória.');
     
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Registers a new user and optionally links them to a partner.
    */
   const register = async (name: string, email: string, partnerCode?: string, password?: string) => {
-    if (!password) throw new Error('Password is required');
+    if (!password) throw new Error('A senha é obrigatória.');
 
     let coupleId = null;
 
@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (coupleError || !couple) {
-        throw new Error('Código do parceiro inválido.');
+        throw new Error('Código do parceiro inválido ou não encontrado.');
       }
       coupleId = couple.id;
     }
@@ -192,16 +192,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (authError) {
       console.error("Auth Error:", authError);
-      throw authError;
+      throw new Error(`Erro na autenticação: ${authError.message}`);
     }
 
     // Se a sessão for nula após o registro, significa que a confirmação de e-mail está ativada no Supabase.
-    if (!authData.session && !authData.user) {
-      throw new Error('Confirmação de e-mail ativada. Por favor, vá no Supabase > Authentication > Providers > Email e DESATIVE "Confirm email" para testar mais facilmente, ou verifique sua caixa de entrada.');
+    // Não podemos inserir no banco de dados sem uma sessão ativa devido ao RLS.
+    if (!authData.session) {
+      throw new Error('Confirmação de e-mail ativada. Por favor, verifique sua caixa de entrada para confirmar o e-mail OU desative "Confirm email" no painel do Supabase (Authentication > Providers > Email) para testar mais facilmente.');
     }
 
-    // Ensure profile exists (Supabase usually handles this via trigger, but let's be safe)
+    // Se temos sessão, o usuário está logado e o RLS (auth.uid()) vai funcionar.
     if (authData.user) {
+      // 1. Tentar atualizar o perfil (caso uma trigger já tenha criado) ou inserir um novo
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({ 
@@ -212,35 +214,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (profileError) {
         console.error("Profile Error Details:", profileError);
-        throw new Error(`Erro ao criar perfil do usuário: ${profileError.message}`);
+        throw new Error(`Erro ao salvar perfil: ${profileError.message}. Verifique as políticas RLS da tabela 'profiles'.`);
       }
-    }
 
-    // If no partner code, create a new couple
-    if (!coupleId && authData.user) {
-      const { data: newCouple, error: newCoupleError } = await supabase
-        .from('couples')
-        .insert([{ couple_code: generateCode() }])
-        .select()
-        .single();
+      // 2. Criar um novo casal se não houver código de parceiro
+      if (!coupleId) {
+        const { data: newCouple, error: newCoupleError } = await supabase
+          .from('couples')
+          .insert([{ couple_code: generateCode() }])
+          .select()
+          .single();
 
-      if (newCoupleError) {
-        console.error("Couple Error:", newCoupleError);
-        throw new Error('Erro ao criar o código do casal. Verifique as políticas do banco de dados (RLS).');
+        if (newCoupleError) {
+          console.error("Couple Error:", newCoupleError);
+          throw new Error(`Erro ao gerar código do casal: ${newCoupleError.message}. Verifique as políticas RLS da tabela 'couples'.`);
+        }
+        coupleId = newCouple.id;
       }
-      coupleId = newCouple.id;
-    }
 
-    // Update the profile with the couple_id
-    if (authData.user && coupleId) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ couple_id: coupleId })
-        .eq('id', authData.user.id);
+      // 3. Atualizar o perfil com o ID do casal
+      if (coupleId) {
+        const { error: linkError } = await supabase
+          .from('profiles')
+          .update({ couple_id: coupleId })
+          .eq('id', authData.user.id);
 
-      if (profileError) {
-        console.error("Profile Update Error:", profileError);
-        throw new Error('Erro ao vincular perfil ao casal.');
+        if (linkError) {
+          console.error("Profile Update Error:", linkError);
+          throw new Error(`Erro ao vincular casal: ${linkError.message}`);
+        }
       }
     }
 
@@ -260,44 +262,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Updates the user's profile photo.
    */
-  const updatePhoto = async (file: File) => {
-    if (user && user.id) {
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+  const updatePhoto = async (file: File): Promise<void> => {
+    if (!user || !user.id) return;
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
 
-        // Upload image to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file, { upsert: true });
+      // Upload image to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
 
-        if (uploadError) {
-          console.error('Upload Error Details:', uploadError);
-          throw new Error(`Erro no upload: ${uploadError.message}`);
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-
-        // Update profile with new URL
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ photo_url: publicUrl })
-          .eq('id', user.id);
-
-        if (updateError) {
-          console.error('Profile Update Error Details:', updateError);
-          throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
-        }
-
-        setUser({ ...user, photoUrl: publicUrl });
-      } catch (error: any) {
-        console.error('Error updating photo:', error);
-        alert(error.message || 'Erro ao atualizar a foto. Tente novamente.');
+      if (uploadError) {
+        console.error('Upload Error Details:', uploadError);
+        throw new Error(`Erro no upload: ${uploadError.message}`);
       }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile with new URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photo_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Profile Update Error Details:', updateError);
+        throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
+      }
+
+      setUser({ ...user, photoUrl: publicUrl });
+    } catch (error: any) {
+      console.error('Error updating photo:', error);
+      throw new Error(error.message || 'Erro ao atualizar a foto. Tente novamente.');
     }
   };
 

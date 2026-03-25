@@ -60,14 +60,23 @@ export function Register() {
     } catch (err: any) {
       console.error("Full registration error:", err);
       // Map Supabase errors to user-friendly messages
-      let message = 'Erro ao criar conta.';
-      const errorMessage = (err.message || '').toLowerCase();
+      let message = err.message || 'Erro ao criar conta.';
+      const errorMessage = message.toLowerCase();
       
       if (errorMessage.includes('user already registered')) {
         message = 'Este e-mail já está cadastrado. Tente fazer login.';
-      } else if (errorMessage.includes('password should be at least 6 characters') || errorMessage.includes('password must be at least 6 characters')) {
+      } else if (errorMessage.includes('password should be at least') || errorMessage.includes('password must be at least')) {
         message = 'A senha deve ter pelo menos 6 caracteres.';
+      } else if (errorMessage.includes('invalid login credentials')) {
+        message = 'E-mail ou senha incorretos.';
+      } else if (errorMessage.includes('email not confirmed')) {
+        message = 'E-mail não confirmado. Verifique sua caixa de entrada.';
+      } else if (errorMessage.includes('rate limit')) {
+        message = 'Muitas tentativas. Tente novamente mais tarde.';
+      } else if (errorMessage.includes('network')) {
+        message = 'Erro de conexão. Verifique sua internet.';
       }
+      
       setError(message);
     } finally {
       setIsLoading(false);
@@ -140,41 +149,93 @@ export function Register() {
 
   // Default Registration Form
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background-light dark:bg-background-dark transition-colors duration-300">
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1920&auto=format&fit=crop" 
-          alt="Background" 
-          className="w-full h-full object-cover opacity-20 dark:opacity-40 scale-105"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background-light via-background-light/80 to-transparent dark:from-background-dark dark:via-background-dark/80"></div>
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background-light dark:bg-background-dark overflow-hidden transition-colors duration-300">
+      {/* Left Side: Branding/Visual (Desktop Only) */}
+      <div className="hidden md:flex md:w-1/2 relative items-center justify-center p-12 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1920&auto=format&fit=crop" 
+            alt="Background" 
+            className="w-full h-full object-cover opacity-30 dark:opacity-50 scale-105"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background-light via-background-light/80 to-transparent dark:from-background-dark dark:via-background-dark/80" />
+        </div>
+        
+        <div className="relative z-10 max-w-lg">
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="size-24 rounded-3xl bg-white/50 dark:bg-white/10 backdrop-blur-md border border-primary/20 dark:border-white/20 flex items-center justify-center mb-8 shadow-2xl">
+              <img 
+                alt="NaumDito Logo" 
+                className="w-16 h-16 object-contain" 
+                src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" 
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <h1 className="text-6xl font-black text-navy-main dark:text-white leading-tight tracking-tighter mb-6">
+              Onde o silêncio <br />
+              <span className="text-primary dark:text-peach-main">encontra a voz.</span>
+            </h1>
+            <p className="text-xl text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+              Transforme sua comunicação e fortaleça sua conexão emocional com ferramentas baseadas em psicologia e empatia.
+            </p>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Decorative elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-peach-main/10 rounded-full blur-[120px]"></div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-md px-6"
-      >
-        <div className="backdrop-blur-xl bg-white/80 dark:bg-white/10 border border-primary/10 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
-          <div className="flex items-center mb-6">
-            <button onClick={() => navigate(-1)} className="text-navy-main dark:text-white flex size-10 items-center justify-center hover:bg-primary/10 dark:hover:bg-white/10 rounded-full transition-colors">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
+      {/* Mobile Top Section (Mobile Only) */}
+      <div className="md:hidden relative h-[35vh] w-full flex flex-col items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1080&auto=format&fit=crop" 
+            alt="Background" 
+            className="w-full h-full object-cover opacity-60 dark:opacity-40"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/80 to-primary dark:from-background-dark/80 dark:to-background-dark" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center mt-8">
+          <div className="size-20 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center mb-4 shadow-xl">
+            <img 
+              alt="NaumDito Logo" 
+              className="w-12 h-12 object-contain" 
+              src="https://lh3.googleusercontent.com/d/1dz6abenaA_8IjqSEOfxAiLvmtYyQUVQb" 
+              referrerPolicy="no-referrer"
+            />
           </div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">NaumDito</h2>
+          <p className="text-white/80 mt-1 font-medium">Conectando corações</p>
+        </div>
+        <button onClick={() => navigate(-1)} className="absolute top-6 left-6 text-white flex size-10 items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors z-20">
+          <span className="material-symbols-outlined">arrow_back</span>
+        </button>
+      </div>
 
-          <div className="flex flex-col items-center mb-8">
-            <h1 className="text-3xl font-bold text-navy-main dark:text-white text-center tracking-tight">Crie sua conta</h1>
-            <p className="text-slate-500 dark:text-slate-300 text-center mt-2 font-medium">Comece sua jornada de conexão</p>
-          </div>
+      {/* Right Side: Register Form */}
+      <div className="flex-1 flex items-start md:items-center justify-center p-0 md:p-12 relative -mt-6 md:mt-0 z-20">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md bg-white dark:bg-background-dark md:bg-transparent md:dark:bg-transparent rounded-t-[2rem] md:rounded-none p-8 md:p-10 shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.1)] md:shadow-none min-h-[65vh] md:min-h-0 flex flex-col"
+        >
+          <div className="md:backdrop-blur-xl md:bg-white/80 md:dark:bg-white/5 md:border md:border-primary/10 md:dark:border-white/10 md:rounded-[2rem] md:p-10 md:shadow-2xl flex-1">
+            <div className="flex items-center mb-6 hidden md:flex">
+              <button onClick={() => navigate(-1)} className="text-navy-main dark:text-white flex size-10 items-center justify-center hover:bg-primary/10 dark:hover:bg-white/10 rounded-full transition-colors -ml-2">
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+            </div>
 
-          {error && (
+            <div className="flex flex-col items-center mb-8">
+              <h1 className="text-2xl md:text-3xl font-bold text-navy-main dark:text-white text-center tracking-tight">Crie sua conta</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-center mt-2 text-sm md:text-base">Comece sua jornada de conexão</p>
+            </div>
+
+            {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-3">
               <span className="material-symbols-outlined text-red-500 shrink-0">error</span>
               <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
@@ -260,8 +321,9 @@ export function Register() {
               Já tem uma conta? <Link to="/login" className="text-primary font-bold hover:underline">Faça login</Link>
             </p>
           </div>
-        </div>
-      </motion.div>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

@@ -24,6 +24,8 @@ export function Profile() {
 
   const [copySuccess, setCopySuccess] = useState(false);
 
+  const [error, setError] = useState('');
+
   /**
    * Handles user logout and redirects to the landing page.
    */
@@ -65,10 +67,15 @@ export function Profile() {
    * 
    * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
    */
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      updatePhoto(file);
+      setError('');
+      try {
+        await updatePhoto(file);
+      } catch (err: any) {
+        setError(err.message || 'Erro ao atualizar a foto.');
+      }
     }
   };
 
@@ -90,6 +97,13 @@ export function Profile() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-8 py-12 space-y-12">
           
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-3">
+              <span className="material-symbols-outlined text-red-500 shrink-0">error</span>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+            </div>
+          )}
+
           {/* User Info Section */}
           <div className="flex flex-col items-center text-center">
             <div className="size-32 md:size-40 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative group overflow-hidden cursor-pointer" onClick={handlePhotoClick}>
@@ -102,14 +116,15 @@ export function Profile() {
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
                 <span className="material-symbols-outlined text-white text-3xl drop-shadow-md">edit</span>
               </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handlePhotoChange} 
-                accept="image/*" 
-                className="hidden" 
-              />
             </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handlePhotoChange} 
+              accept="image/*" 
+              className="hidden" 
+            />
+
             
             <div className="flex items-center gap-2 group cursor-pointer">
               <h2 className="text-3xl font-black text-navy-main dark:text-slate-100 tracking-tight">{user?.name || 'Usuário'}</h2>
@@ -144,7 +159,7 @@ export function Profile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button 
               onClick={() => navigate('/settings')}
-              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 hover:border-primary/20 transition-all group"
+              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 md:hover:border-primary/20 transition-all group active:scale-[0.98]"
             >
               <div className="flex items-center gap-4">
                 <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
@@ -157,7 +172,7 @@ export function Profile() {
             
             <button 
               onClick={() => navigate('/notifications')}
-              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 hover:border-primary/20 transition-all group relative"
+              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 md:hover:border-primary/20 transition-all group relative active:scale-[0.98]"
             >
               <div className="flex items-center gap-4">
                 <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform relative">
@@ -171,7 +186,7 @@ export function Profile() {
 
             <button 
               onClick={() => navigate('/privacy')}
-              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 hover:border-primary/20 transition-all group"
+              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 md:hover:border-primary/20 transition-all group active:scale-[0.98]"
             >
               <div className="flex items-center gap-4">
                 <div className="size-12 rounded-2xl bg-peach-main/10 flex items-center justify-center text-peach-main group-hover:scale-110 transition-transform">
@@ -182,7 +197,7 @@ export function Profile() {
               <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
             </button>
 
-            <button onClick={() => navigate('/integrations')} className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 hover:border-primary/20 transition-all group">
+            <button onClick={() => navigate('/integrations')} className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 md:hover:border-primary/20 transition-all group active:scale-[0.98]">
               <div className="flex items-center gap-4">
                 <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">hub</span>
@@ -192,7 +207,7 @@ export function Profile() {
               <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
             </button>
 
-            <button onClick={openLogoutModal} className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all group">
+            <button onClick={openLogoutModal} className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 md:hover:bg-red-100 dark:md:hover:bg-red-900/20 transition-all group active:scale-[0.98]">
               <div className="flex items-center gap-4 text-red-600 dark:text-red-400">
                 <div className="size-12 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">logout</span>
