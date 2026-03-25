@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Components
 import { BottomNav } from '../components/layout/BottomNav';
@@ -19,16 +19,32 @@ import { PageHeader } from '../components/layout/PageHeader';
  */
 export function Agreements() {
   const navigate = useNavigate();
-  const { agreements, addAgreement, updateAgreement, removeAgreement } = useData();
+  const { agreements, addAgreement, updateAgreement, removeAgreement, clearBrokenAgreements } = useData();
   
   // State for modals and form inputs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isJustificationModalOpen, setIsJustificationModalOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
+  const [isTipsModalOpen, setIsTipsModalOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const [newAgreement, setNewAgreement] = useState('');
   const [justification, setJustification] = useState('');
   const [agreementToBreak, setAgreementToBreak] = useState<string | null>(null);
   const [agreementToDelete, setAgreementToDelete] = useState<string | null>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   /**
    * Handles the submission of a new agreement.
@@ -73,7 +89,16 @@ export function Agreements() {
     if (agreementToDelete) {
       removeAgreement(agreementToDelete);
       setAgreementToDelete(null);
+      setIsConfirmDeleteOpen(false);
     }
+  };
+
+  /**
+   * Handles clearing all broken agreements.
+   */
+  const handleConfirmClear = () => {
+    clearBrokenAgreements();
+    setIsConfirmClearOpen(false);
   };
 
   /**
@@ -92,9 +117,47 @@ export function Agreements() {
         <PageHeader 
           title="Acordos - Nossos combinados" 
           rightAction={
-            <button className="flex items-center justify-center rounded-full size-10 hover:bg-primary/10 transition-colors">
-              <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">more_horiz</span>
-            </button>
+            <div className="relative" ref={menuRef}>
+              <button 
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="flex items-center justify-center rounded-full size-10 hover:bg-primary/10 transition-colors"
+              >
+                <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">more_horiz</span>
+              </button>
+
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-2 z-50 overflow-hidden"
+                  >
+                    <button 
+                      onClick={() => {
+                        setIsTipsModalOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg text-peach-500">lightbulb</span>
+                      Dicas de Acordos
+                    </button>
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2 my-1" />
+                    <button 
+                      onClick={() => {
+                        setIsConfirmClearOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">delete_sweep</span>
+                      Limpar Histórico
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           }
         />
 
@@ -263,6 +326,71 @@ export function Agreements() {
         confirmText="Remover"
         type="danger"
       />
+
+      {/* Confirm Clear Modal */}
+      <ConfirmModal
+        isOpen={isConfirmClearOpen}
+        onClose={() => setIsConfirmClearOpen(false)}
+        onConfirm={handleConfirmClear}
+        title="Limpar Histórico"
+        message="Deseja remover todos os acordos descumpridos do seu histórico? Esta ação não pode ser desfeita."
+        confirmText="Limpar Tudo"
+        type="danger"
+      />
+
+      {/* Tips Modal */}
+      <Modal isOpen={isTipsModalOpen} onClose={() => setIsTipsModalOpen(false)} title="Dicas de Acordos">
+        <div className="space-y-6">
+          <div className="p-4 bg-peach-50 dark:bg-peach-900/10 rounded-2xl border border-peach-100 dark:border-peach-900/20">
+            <h4 className="font-bold text-peach-700 dark:text-peach-400 mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">info</span>
+              Por que fazer acordos?
+            </h4>
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Acordos ajudam a alinhar expectativas e evitar conflitos desnecessários. Eles devem ser revistos periodicamente.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="size-8 rounded-full bg-navy-main/10 text-navy-main flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold">01</span>
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Seja Específico</p>
+                <p className="text-xs text-slate-500">Em vez de "ser mais carinhoso", tente "dar um beijo de bom dia todos os dias".</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="size-8 rounded-full bg-navy-main/10 text-navy-main flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold">02</span>
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Foco no Positivo</p>
+                <p className="text-xs text-slate-500">Foque no que vocês QUEREM fazer, não apenas no que querem evitar.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="size-8 rounded-full bg-navy-main/10 text-navy-main flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold">03</span>
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Revisão Semanal</p>
+                <p className="text-xs text-slate-500">Use o check-in semanal para conversar sobre como os acordos estão funcionando.</p>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => setIsTipsModalOpen(false)}
+            className="w-full h-14 bg-navy-main text-white rounded-2xl font-bold text-lg shadow-xl shadow-navy-main/20 hover:bg-navy-main/90 transition-all"
+          >
+            Entendi
+          </button>
+        </div>
+      </Modal>
 
       <BottomNav />
     </div>

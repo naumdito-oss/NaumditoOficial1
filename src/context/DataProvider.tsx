@@ -32,6 +32,7 @@ interface DataContextType {
   addAgreement: (text: string) => void;
   updateAgreement: (id: string, updates: Partial<Agreement>) => void;
   removeAgreement: (id: string) => void;
+  clearBrokenAgreements: () => void;
   addExchange: (exchange: Omit<ExchangeItem, 'id' | 'createdAt' | 'status'>) => void;
   updateExchange: (id: string, updates: Partial<ExchangeItem>) => void;
   removeExchange: (id: string) => void;
@@ -142,7 +143,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.id || !user?.coupleId) return;
+      if (!user?.id || !user?.coupleId) {
+        // Clear state if no user is logged in
+        setPoints(0);
+        setLevel(1);
+        setAgreements([]);
+        setExchanges([]);
+        setWishlist([]);
+        setEmpathyMessages([]);
+        setNextDatePlan(null);
+        setCheckinCompleted(false);
+        setMicroGestureCompleted(false);
+        setWeeklyHistory([]);
+        setCheckinHistory([]);
+        setAchievements([]);
+        setCurrentWeekProgress(0);
+        setWeeklyPoints(0);
+        setDailyPoints(0);
+        setPointsModal({ isOpen: false, points: 0, reason: '' });
+        isUpdatingProfileRef.current = false;
+
+        // Clear user-specific localStorage
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS);
+        localStorage.removeItem('weekly_points');
+        localStorage.removeItem('daily_points');
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_DAY_START);
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_START);
+        return;
+      }
 
       try {
         // Load profile stats
@@ -450,6 +478,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const removeAgreement = async (id: string) => {
     const { error } = await supabase.from('agreements').delete().eq('id', id);
     if (error) console.error('Error removing agreement:', error);
+  };
+
+  const clearBrokenAgreements = async () => {
+    if (!user?.coupleId) return;
+    const { error } = await supabase
+      .from('agreements')
+      .delete()
+      .eq('couple_id', user.coupleId)
+      .eq('status', 'broken');
+    if (error) console.error('Error clearing broken agreements:', error);
   };
 
   const addExchange = async (exchange: Omit<ExchangeItem, 'id' | 'createdAt' | 'status'>) => {
@@ -904,6 +942,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       addAgreement,
       updateAgreement,
       removeAgreement,
+      clearBrokenAgreements,
       addExchange,
       updateExchange,
       removeExchange,
