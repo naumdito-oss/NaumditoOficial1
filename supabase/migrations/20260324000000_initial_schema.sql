@@ -95,11 +95,10 @@ create table public.next_date_plans (
 
 -- Profiles
 alter table public.profiles enable row level security;
-create policy "Users can view their own profile and their partner's profile." on public.profiles
-  for select using (
-    auth.uid() = id or 
-    couple_id = (select couple_id from public.profiles where id = auth.uid())
-  );
+create policy "Users can view their own profile." on public.profiles
+  for select using (auth.uid() = id);
+create policy "Users can view their partner's profile." on public.profiles
+  for select using (couple_id is not null and couple_id = (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can update their own profile." on public.profiles
   for update using (auth.uid() = id);
 
@@ -113,50 +112,56 @@ create policy "Users can view their own couple data." on public.couples
 -- Agreements
 alter table public.agreements enable row level security;
 create policy "Users can view their couple's agreements." on public.agreements
-  for select using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for select using (couple_id = (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can insert agreements for their couple." on public.agreements
-  for insert with check (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for insert with check (couple_id = (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can update their couple's agreements." on public.agreements
-  for update using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for update using (couple_id = (select p.couple_id from public.profiles p where p.id = auth.uid()));
+create policy "Users can delete their couple's agreements." on public.agreements
+  for delete using (couple_id = (select p.couple_id from public.profiles p where p.id = auth.uid()));
 
 -- Exchanges
 alter table public.exchanges enable row level security;
 create policy "Users can view their couple's exchanges." on public.exchanges
-  for select using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for select using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can insert exchanges for their couple." on public.exchanges
-  for insert with check (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for insert with check (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can update their couple's exchanges." on public.exchanges
-  for update using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for update using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
+create policy "Users can delete their couple's exchanges." on public.exchanges
+  for delete using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 
 -- Wishlist Items
 alter table public.wishlist_items enable row level security;
 create policy "Users can view their couple's wishlist." on public.wishlist_items
-  for select using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for select using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can insert wishlist items for their couple." on public.wishlist_items
-  for insert with check (couple_id = (select couple_id from public.profiles where id = auth.uid()));
-create policy "Users can delete their own wishlist items." on public.wishlist_items
-  for delete using (author_id = auth.uid());
+  for insert with check (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
+create policy "Users can delete their couple's wishlist items." on public.wishlist_items
+  for delete using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 
 -- Checkins
 alter table public.checkins enable row level security;
 create policy "Users can view their couple's checkins." on public.checkins
-  for select using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for select using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can insert checkins for their couple." on public.checkins
-  for insert with check (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for insert with check (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 
 -- Empathy Messages
 alter table public.empathy_messages enable row level security;
 create policy "Users can view their couple's empathy messages." on public.empathy_messages
-  for select using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for select using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can insert empathy messages for their couple." on public.empathy_messages
-  for insert with check (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for insert with check (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
+create policy "Users can delete their couple's empathy messages." on public.empathy_messages
+  for delete using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 
 -- Next Date Plans
 alter table public.next_date_plans enable row level security;
 create policy "Users can view their couple's next date plans." on public.next_date_plans
-  for select using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for select using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 create policy "Users can insert/update next date plans for their couple." on public.next_date_plans
-  for all using (couple_id = (select couple_id from public.profiles where id = auth.uid()));
+  for all using (couple_id in (select p.couple_id from public.profiles p where p.id = auth.uid()));
 
 -- Trigger to create profile on signup
 create function public.handle_new_user()

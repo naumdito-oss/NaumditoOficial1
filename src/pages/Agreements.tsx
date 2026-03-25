@@ -178,19 +178,27 @@ export function Agreements() {
                 </div>
                 
                 <div className="flex flex-col gap-3">
-                  {agreements.filter(a => a.status === 'active').length === 0 ? (
-                    <div className="text-center bg-white dark:bg-slate-900/20 rounded-3xl p-8 border border-dashed border-slate-200 dark:border-slate-800">
-                      <p className="text-slate-500 text-sm">Nenhum acordo ativo no momento.</p>
-                    </div>
-                  ) : (
-                    agreements.filter(a => a.status === 'active').map((agreement) => (
+                  <AnimatePresence mode="popLayout">
+                    {agreements.filter(a => a.status === 'active').length === 0 ? (
                       <motion.div 
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        key={agreement.id} 
-                        className="flex items-center gap-4 bg-white dark:bg-slate-900/20 p-5 rounded-2xl border border-transparent hover:border-primary/20 hover:shadow-md transition-all group"
+                        key="empty-active"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-center bg-white dark:bg-slate-900/20 rounded-3xl p-8 border border-dashed border-slate-200 dark:border-slate-800"
                       >
+                        <p className="text-slate-500 text-sm">Nenhum acordo ativo no momento.</p>
+                      </motion.div>
+                    ) : (
+                      agreements.filter(a => a.status === 'active').map((agreement) => (
+                        <motion.div 
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          key={agreement.id} 
+                          className="flex items-center gap-4 bg-white dark:bg-slate-900/20 p-5 rounded-2xl border border-transparent hover:border-primary/20 hover:shadow-md transition-all group"
+                        >
                         <div className="flex items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0 size-12 group-hover:bg-primary group-hover:text-white transition-colors">
                           <span className="material-symbols-outlined">handshake</span>
                         </div>
@@ -219,6 +227,7 @@ export function Agreements() {
                       </motion.div>
                     ))
                   )}
+                  </AnimatePresence>
                 </div>
               </div>
 
@@ -227,11 +236,13 @@ export function Agreements() {
                 <div className="space-y-4">
                   <h3 className="text-red-500 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Descumpridos</h3>
                   <div className="flex flex-col gap-3">
+                    <AnimatePresence mode="popLayout">
                     {agreements.filter(a => a.status === 'broken').map((agreement) => (
                       <motion.div 
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
                         key={agreement.id} 
                         className="flex items-center gap-4 bg-red-50/50 dark:bg-red-900/10 p-5 rounded-2xl border border-red-100 dark:border-red-900/20 group"
                       >
@@ -260,6 +271,7 @@ export function Agreements() {
                         </button>
                       </motion.div>
                     ))}
+                    </AnimatePresence>
                   </div>
                 </div>
               )}

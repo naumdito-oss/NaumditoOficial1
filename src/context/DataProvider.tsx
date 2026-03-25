@@ -77,6 +77,174 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [pointsModal, setPointsModal] = useState({ isOpen: false, points: 0, reason: '' });
   const isUpdatingProfileRef = useRef(false);
 
+  const fetchData = React.useCallback(async () => {
+    if (!user?.id || !user?.coupleId) {
+      // Clear state if no user is logged in
+      setPoints(0);
+      setLevel(1);
+      setAgreements([]);
+      setExchanges([]);
+      setWishlist([]);
+      setEmpathyMessages([]);
+      setNextDatePlan(null);
+      setCheckinCompleted(false);
+      setMicroGestureCompleted(false);
+      setWeeklyHistory([]);
+      setCheckinHistory([]);
+      setAchievements([]);
+      setCurrentWeekProgress(0);
+      setWeeklyPoints(0);
+      setDailyPoints(0);
+      setPointsModal({ isOpen: false, points: 0, reason: '' });
+      isUpdatingProfileRef.current = false;
+
+      // Clear user-specific localStorage
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS);
+      localStorage.removeItem('weekly_points');
+      localStorage.removeItem('daily_points');
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_DAY_START);
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_START);
+      return;
+    }
+
+    try {
+      // Load profile stats
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('points, level, weekly_points, daily_points, checkin_completed, micro_gesture_completed')
+        .eq('id', user.id)
+        .single();
+
+      if (profile && !isUpdatingProfileRef.current) {
+        setPoints(profile.points || 0);
+        setLevel(profile.level || 1);
+        setWeeklyPoints(profile.weekly_points || 0);
+        setDailyPoints(profile.daily_points || 0);
+        setCheckinCompleted(profile.checkin_completed || false);
+        setMicroGestureCompleted(profile.micro_gesture_completed || false);
+      }
+
+      // Load agreements
+      const { data: agreementsData } = await supabase
+        .from('agreements')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('created_at', { ascending: false });
+      if (agreementsData) setAgreements(agreementsData.map(a => ({
+        id: a.id,
+        text: a.text,
+        status: a.status,
+        justification: a.justification,
+        createdAt: a.created_at
+      })));
+
+      // Load exchanges
+      const { data: exchangesData } = await supabase
+        .from('exchanges')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('created_at', { ascending: false });
+      if (exchangesData) setExchanges(exchangesData.map(e => ({
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        type: e.type,
+        status: e.status,
+        counterOffer: e.counter_offer,
+        createdAt: e.created_at
+      })));
+
+      // Load wishlist
+      const { data: wishlistData } = await supabase
+        .from('wishlist_items')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('created_at', { ascending: false });
+      if (wishlistData) setWishlist(wishlistData.map(w => ({
+        id: w.id,
+        link: w.link,
+        title: w.title,
+        image: w.image,
+        authorId: w.author_id,
+        createdAt: w.created_at
+      })));
+
+      // Load empathy messages
+      const { data: empathyData } = await supabase
+        .from('empathy_messages')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('created_at', { ascending: false });
+      if (empathyData) setEmpathyMessages(empathyData.map(m => ({
+        id: m.id,
+        text: m.text,
+        vibe: m.vibe,
+        createdAt: m.created_at
+      })));
+
+      // Load next date plan
+      const { data: datePlanData } = await supabase
+        .from('next_date_plans')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (datePlanData) setNextDatePlan({
+        title: datePlanData.title,
+        description: datePlanData.description,
+        location: datePlanData.location,
+        photo: datePlanData.photo,
+        programType: datePlanData.program_type,
+        updatedAt: datePlanData.updated_at
+      });
+
+      // Load weekly history
+      const { data: historyData } = await supabase
+        .from('weekly_history')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('week_starting', { ascending: false });
+      if (historyData) setWeeklyHistory(historyData.map(h => ({
+        weekStarting: h.week_starting,
+        percentage: h.percentage
+      })));
+
+      // Load checkin history
+      const { data: checkinsData } = await supabase
+        .from('checkins')
+        .select('*')
+        .eq('couple_id', user.coupleId)
+        .order('created_at', { ascending: false });
+      if (checkinsData) setCheckinHistory(checkinsData.map(c => ({
+        id: c.id,
+        date: c.created_at,
+        feeling: c.feeling,
+        tags: c.tags,
+        note: c.note
+      })));
+
+      // Load achievements
+      const { data: achievementsData } = await supabase
+        .from('achievements')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (achievementsData) setAchievements(achievementsData.map(a => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        points: a.points,
+        icon: a.icon,
+        claimed: a.claimed,
+        createdAt: a.created_at
+      })));
+
+    } catch (error) {
+      console.error('Error loading data from Supabase:', error);
+    }
+  }, [user?.id, user?.coupleId]);
+
   const showPoints = (points: number, reason: string) => {
     setPointsModal({ isOpen: true, points, reason });
   };
@@ -142,186 +310,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.id || !user?.coupleId) {
-        // Clear state if no user is logged in
-        setPoints(0);
-        setLevel(1);
-        setAgreements([]);
-        setExchanges([]);
-        setWishlist([]);
-        setEmpathyMessages([]);
-        setNextDatePlan(null);
-        setCheckinCompleted(false);
-        setMicroGestureCompleted(false);
-        setWeeklyHistory([]);
-        setCheckinHistory([]);
-        setAchievements([]);
-        setCurrentWeekProgress(0);
-        setWeeklyPoints(0);
-        setDailyPoints(0);
-        setPointsModal({ isOpen: false, points: 0, reason: '' });
-        isUpdatingProfileRef.current = false;
-
-        // Clear user-specific localStorage
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS);
-        localStorage.removeItem('weekly_points');
-        localStorage.removeItem('daily_points');
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_DAY_START);
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_START);
-        return;
-      }
-
-      try {
-        // Load profile stats
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('points, level, weekly_points, daily_points, checkin_completed, micro_gesture_completed')
-          .eq('id', user.id)
-          .single();
-
-        if (profile && !isUpdatingProfileRef.current) {
-          setPoints(profile.points || 0);
-          setLevel(profile.level || 1);
-          setWeeklyPoints(profile.weekly_points || 0);
-          setDailyPoints(profile.daily_points || 0);
-          setCheckinCompleted(profile.checkin_completed || false);
-          setMicroGestureCompleted(profile.micro_gesture_completed || false);
-        }
-
-        // Load agreements
-        const { data: agreementsData } = await supabase
-          .from('agreements')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('created_at', { ascending: false });
-        if (agreementsData) setAgreements(agreementsData.map(a => ({
-          id: a.id,
-          text: a.text,
-          status: a.status,
-          justification: a.justification,
-          createdAt: a.created_at
-        })));
-
-        // Load exchanges
-        const { data: exchangesData } = await supabase
-          .from('exchanges')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('created_at', { ascending: false });
-        if (exchangesData) setExchanges(exchangesData.map(e => ({
-          id: e.id,
-          title: e.title,
-          description: e.description,
-          type: e.type,
-          status: e.status,
-          counterOffer: e.counter_offer,
-          createdAt: e.created_at
-        })));
-
-        // Load wishlist
-        const { data: wishlistData } = await supabase
-          .from('wishlist_items')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('created_at', { ascending: false });
-        if (wishlistData) setWishlist(wishlistData.map(w => ({
-          id: w.id,
-          link: w.link,
-          title: w.title,
-          image: w.image,
-          authorId: w.author_id,
-          createdAt: w.created_at
-        })));
-
-        // Load empathy messages
-        const { data: empathyData } = await supabase
-          .from('empathy_messages')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('created_at', { ascending: false });
-        if (empathyData) setEmpathyMessages(empathyData.map(m => ({
-          id: m.id,
-          text: m.text,
-          vibe: m.vibe,
-          createdAt: m.created_at
-        })));
-
-        // Load next date plan
-        const { data: datePlanData } = await supabase
-          .from('next_date_plans')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .single();
-        if (datePlanData) setNextDatePlan({
-          title: datePlanData.title,
-          description: datePlanData.description,
-          location: datePlanData.location,
-          photo: datePlanData.photo,
-          programType: datePlanData.program_type,
-          updatedAt: datePlanData.updated_at
-        });
-
-        // Load weekly history
-        const { data: historyData } = await supabase
-          .from('weekly_history')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('week_starting', { ascending: false });
-        if (historyData) setWeeklyHistory(historyData.map(h => ({
-          weekStarting: h.week_starting,
-          percentage: h.percentage
-        })));
-
-        // Load checkin history
-        const { data: checkinsData } = await supabase
-          .from('checkins')
-          .select('*')
-          .eq('couple_id', user.coupleId)
-          .order('created_at', { ascending: false });
-        if (checkinsData) setCheckinHistory(checkinsData.map(c => ({
-          id: c.id,
-          date: c.created_at,
-          feeling: c.feeling,
-          tags: c.tags,
-          note: c.note
-        })));
-
-        // Load achievements
-        const { data: achievementsData } = await supabase
-          .from('achievements')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        if (achievementsData) setAchievements(achievementsData.map(a => ({
-          id: a.id,
-          title: a.title,
-          description: a.description,
-          points: a.points,
-          icon: a.icon,
-          claimed: a.claimed,
-          createdAt: a.created_at
-        })));
-
-      } catch (error) {
-        console.error('Error loading data from Supabase:', error);
-      }
-    };
-
     fetchData();
+
+    if (!user?.id || !user?.coupleId) return;
 
     // Subscribe to real-time changes
     const channels = [
-      supabase.channel('profiles_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user?.id}` }, fetchData),
-      supabase.channel('agreements_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'agreements', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('exchanges_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'exchanges', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('wishlist_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist_items', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('empathy_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'empathy_messages', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('date_plans_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'next_date_plans', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('checkins_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: `couple_id=eq.${user?.coupleId}` }, fetchData),
-      supabase.channel('achievements_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `user_id=eq.${user?.id}` }, fetchData)
+      supabase.channel('profiles_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchData),
+      supabase.channel('agreements_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'agreements', filter: `couple_id=eq.${user.coupleId}` }, fetchData),
+      supabase.channel('exchanges_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'exchanges', filter: `couple_id=eq.${user.coupleId}` }, fetchData),
+      supabase.channel('wishlist_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist_items', filter: `couple_id=eq.${user.coupleId}` }, fetchData),
+      supabase.channel('empathy_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'empathy_messages', filter: `couple_id=eq.${user.coupleId}` }, fetchData),
+      supabase.channel('date_plans_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'next_date_plans', filter: `couple_id=eq.${user.coupleId}` }, fetchData),
+      supabase.channel('checkins_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: `couple_id=eq.${user.coupleId}` }, fetchData),
+      supabase.channel('achievements_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `user_id=eq.${user.id}` }, fetchData)
     ];
 
     channels.forEach(channel => channel.subscribe());
@@ -329,7 +331,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [user?.id, user?.coupleId]);
+  }, [user?.id, user?.coupleId, fetchData]);
 
   /**
    * Automatically calculates the current week's progress based on various engagement metrics.
@@ -412,6 +414,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Manually refresh data to ensure UI updates
+    await fetchData();
+
     // Notify partner if agreement was broken
     if (updates.status === 'broken' && user?.id && user?.coupleId) {
       const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
@@ -453,6 +458,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Manually refresh data to ensure UI updates
+    await fetchData();
+
     await recordAchievement({
       title: 'Novo Acordo',
       description: `Você criou um novo combinado: ${text}`,
@@ -476,18 +484,52 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeAgreement = async (id: string) => {
-    const { error } = await supabase.from('agreements').delete().eq('id', id);
-    if (error) console.error('Error removing agreement:', error);
+    // Optimistic update using functional state to avoid stale closures
+    let previousAgreements: Agreement[] = [];
+    setAgreements(prev => {
+      previousAgreements = [...prev];
+      return prev.filter(a => a.id !== id);
+    });
+
+    try {
+      const { error } = await supabase.from('agreements').delete().eq('id', id);
+      if (error) {
+        throw error;
+      }
+      // Rely on real-time subscription for final sync, 
+      // but call fetchData as a fallback after a short delay
+      setTimeout(() => fetchData(), 500);
+    } catch (error) {
+      console.error('Error removing agreement:', error);
+      setAgreements(previousAgreements); // Revert
+    }
   };
 
   const clearBrokenAgreements = async () => {
     if (!user?.coupleId) return;
-    const { error } = await supabase
-      .from('agreements')
-      .delete()
-      .eq('couple_id', user.coupleId)
-      .eq('status', 'broken');
-    if (error) console.error('Error clearing broken agreements:', error);
+
+    // Optimistic update using functional state
+    let previousAgreements: Agreement[] = [];
+    setAgreements(prev => {
+      previousAgreements = [...prev];
+      return prev.filter(a => a.status !== 'broken');
+    });
+
+    try {
+      const { error } = await supabase
+        .from('agreements')
+        .delete()
+        .eq('couple_id', user.coupleId)
+        .eq('status', 'broken');
+      
+      if (error) {
+        throw error;
+      }
+      setTimeout(() => fetchData(), 500);
+    } catch (error) {
+      console.error('Error clearing broken agreements:', error);
+      setAgreements(previousAgreements); // Revert
+    }
   };
 
   const addExchange = async (exchange: Omit<ExchangeItem, 'id' | 'createdAt' | 'status'>) => {
@@ -506,6 +548,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error('Error adding exchange:', error);
       return;
     }
+
+    // Manually refresh data to ensure UI updates
+    await fetchData();
 
     await recordAchievement({
       title: 'Nova Permuta',
@@ -545,6 +590,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error('Error updating exchange:', error);
       return;
     }
+
+    // Manually refresh data to ensure UI updates
+    await fetchData();
 
     // Notify partner of status change
     if (user?.id && user?.coupleId) {
@@ -591,8 +639,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeExchange = async (id: string) => {
-    const { error } = await supabase.from('exchanges').delete().eq('id', id);
-    if (error) console.error('Error removing exchange:', error);
+    // Optimistic update using functional state
+    let previousExchanges: ExchangeItem[] = [];
+    setExchanges(prev => {
+      previousExchanges = [...prev];
+      return prev.filter(e => e.id !== id);
+    });
+
+    try {
+      const { error } = await supabase.from('exchanges').delete().eq('id', id);
+      if (error) {
+        throw error;
+      }
+      setTimeout(() => fetchData(), 500);
+    } catch (error) {
+      console.error('Error removing exchange:', error);
+      setExchanges(previousExchanges); // Revert
+    }
   };
 
   const addToWishlist = async (link: string) => {
@@ -632,6 +695,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Manually refresh data to ensure UI updates
+    await fetchData();
+
     // Add points
     const pointsToAdd = 20;
     await addPoints(pointsToAdd);
@@ -661,8 +727,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromWishlist = async (id: string) => {
-    const { error } = await supabase.from('wishlist_items').delete().eq('id', id);
-    if (error) console.error('Error removing from wishlist:', error);
+    // Optimistic update using functional state
+    let previousWishlist: WishlistItem[] = [];
+    setWishlist(prev => {
+      previousWishlist = [...prev];
+      return prev.filter(item => item.id !== id);
+    });
+
+    try {
+      const { error } = await supabase.from('wishlist_items').delete().eq('id', id);
+      if (error) {
+        throw error;
+      }
+      setTimeout(() => fetchData(), 500);
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+      setWishlist(previousWishlist); // Revert
+    }
   };
 
   const addEmpathyMessage = async (message: Omit<EmpathyMessage, 'id' | 'createdAt'>) => {
@@ -675,12 +756,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       vibe: message.vibe
     });
 
-    if (error) console.error('Error adding empathy message:', error);
+    if (error) {
+      console.error('Error adding empathy message:', error);
+      return;
+    }
+
+    // Manually refresh data to ensure UI updates
+    await fetchData();
   };
 
   const removeEmpathyMessage = async (id: string) => {
-    const { error } = await supabase.from('empathy_messages').delete().eq('id', id);
-    if (error) console.error('Error removing empathy message:', error);
+    // Optimistic update using functional state
+    let previousMessages: EmpathyMessage[] = [];
+    setEmpathyMessages(prev => {
+      previousMessages = [...prev];
+      return prev.filter(m => m.id !== id);
+    });
+
+    try {
+      const { error } = await supabase.from('empathy_messages').delete().eq('id', id);
+      if (error) {
+        throw error;
+      }
+      setTimeout(() => fetchData(), 500);
+    } catch (error) {
+      console.error('Error removing empathy message:', error);
+      setEmpathyMessages(previousMessages); // Revert
+    }
   };
 
   const updateNextDatePlan = async (plan: Omit<NextDatePlan, 'updatedAt'>) => {
@@ -697,7 +799,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'couple_id' });
 
-    if (error) console.error('Error updating next date plan:', error);
+    if (error) {
+      console.error('Error updating next date plan:', error);
+      return;
+    }
+    
+    // Manually refresh data to ensure UI updates
+    await fetchData();
     
     // Add points
     const pointsToAdd = 40;
@@ -757,6 +865,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error('Error saving checkin:', checkinError);
       return;
     }
+
+    // Manually refresh data to ensure UI updates
+    await fetchData();
 
     await supabase.from('profiles').update({
       checkin_completed: true

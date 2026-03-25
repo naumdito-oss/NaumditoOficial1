@@ -274,6 +274,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Profile Update Error:", linkError);
           throw new Error(`Erro ao vincular casal: ${linkError.message}`);
         }
+
+        // Refresh user profile to ensure the state has the new coupleId
+        await fetchUserProfile(authData.user.id);
       }
     }
 
