@@ -74,6 +74,7 @@ export const Onboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   // Load existing data
   React.useEffect(() => {
@@ -133,6 +134,9 @@ export const Onboarding: React.FC = () => {
    * and redirects the user to the home page.
    */
   const handleFinish = async () => {
+    if (isFinishing) return;
+    setIsFinishing(true);
+
     // Save to localStorage for immediate persistence and offline access
     localStorage.setItem('onboarding_completed', 'true');
     
@@ -160,10 +164,11 @@ export const Onboarding: React.FC = () => {
         // 2. Update anniversary date in couples table if provided
         if (data.anniversaryDate && user.coupleId) {
           try {
-            await supabase
+            const { error: coupleError } = await supabase
               .from('couples')
               .update({ anniversary_date: data.anniversaryDate })
               .eq('id', user.coupleId);
+            if (coupleError) throw coupleError;
           } catch (coupleErr) {
             console.error('Error updating couple:', coupleErr);
           }
@@ -191,13 +196,18 @@ export const Onboarding: React.FC = () => {
         }
         
         // Refresh user context to immediately remove the incomplete profile alert
-        await refreshUser();
+        try {
+          await refreshUser();
+        } catch (refreshErr) {
+          console.error('Error refreshing user:', refreshErr);
+        }
       }
     } catch (e) {
       console.error('Error in handleFinish:', e);
+    } finally {
+      setIsFinishing(false);
+      navigate('/home');
     }
-    
-    navigate('/home');
   };
 
   const steps = [
@@ -610,10 +620,20 @@ export const Onboarding: React.FC = () => {
         <div className="mt-8 flex flex-col gap-4">
           <button
             onClick={currentStep === steps.length - 1 ? handleFinish : nextStep}
-            className="w-full h-14 md:h-16 bg-navy-main text-white rounded-2xl font-bold text-lg shadow-xl shadow-navy-main/20 hover:bg-navy-main/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            disabled={isFinishing}
+            className={`w-full h-14 md:h-16 bg-navy-main text-white rounded-2xl font-bold text-lg shadow-xl shadow-navy-main/20 hover:bg-navy-main/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${isFinishing ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {currentStep === steps.length - 1 ? 'Finalizar Cadastro' : 'Próximo Passo'}
-            <span className="material-symbols-outlined">arrow_forward</span>
+            {isFinishing ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Finalizando...</span>
+              </>
+            ) : (
+              <>
+                {currentStep === steps.length - 1 ? 'Finalizar Cadastro' : 'Próximo Passo'}
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </>
+            )}
           </button>
           
           {currentStep === 0 && (

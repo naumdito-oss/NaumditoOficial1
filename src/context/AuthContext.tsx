@@ -71,6 +71,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', userId)
           .single();
 
+        // Fallback if join fails (e.g. relationship or column doesn't exist in production yet)
+        if (error && error.code !== 'PGRST116') {
+          console.warn('Error fetching profile with join, trying without join:', error);
+          const retry = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          profile = retry.data;
+          error = retry.error;
+        }
+
         // If profile doesn't exist, try to create it
         if (error && error.code === 'PGRST116') {
           console.log('Profile not found, attempting to create one...');
