@@ -135,50 +135,66 @@ export const Onboarding: React.FC = () => {
   const handleFinish = async () => {
     // Save to localStorage for immediate persistence and offline access
     localStorage.setItem('onboarding_completed', 'true');
-    localStorage.setItem('user_profile', JSON.stringify(data));
+    
+    // Don't save the base64 photoUrl in metadata to save space
+    const metadataToSave = { ...data };
+    delete (metadataToSave as any).photoUrl;
+    localStorage.setItem('user_profile', JSON.stringify(metadataToSave));
     
     try {
       if (user && user.id) {
-        // Update profile in Supabase
-        // We save the entire data object to a metadata column for cross-device persistence
-        const updateData: any = { 
-          name: data.name,
-          metadata: data // This requires the metadata column to exist
-        };
-        
-        await supabase
-          .from('profiles')
-          .update(updateData)
-          .eq('id', user.id);
-
-        // Update anniversary date in couples table if provided
-        if (data.anniversaryDate && user.coupleId) {
-          await supabase
-            .from('couples')
-            .update({ anniversary_date: data.anniversaryDate })
-            .eq('id', user.coupleId);
+        // 1. Upload photo if selected (do this first so it doesn't get skipped)
+        if (selectedFile) {
+          try {
+            await updatePhoto(selectedFile);
+          } catch (photoErr) {
+            console.error('Error uploading photo:', photoErr);
+            // Fallback: save base64 to database if bucket upload fails
+            await supabase
+              .from('profiles')
+              .update({ photo_url: data.photoUrl })
+              .eq('id', user.id);
+          }
         }
 
-        // Upload photo if selected
-        if (selectedFile) {
-          await updatePhoto(selectedFile);
+        // 2. Update anniversary date in couples table if provided
+        if (data.anniversaryDate && user.coupleId) {
+          try {
+            await supabase
+              .from('couples')
+              .update({ anniversary_date: data.anniversaryDate })
+              .eq('id', user.coupleId);
+          } catch (coupleErr) {
+            console.error('Error updating couple:', coupleErr);
+          }
+        }
+
+        // 3. Update profile in Supabase
+        try {
+          const updateData: any = { 
+            name: data.name,
+            metadata: metadataToSave
+          };
+          const { error } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', user.id);
+            
+          if (error) throw error;
+        } catch (e) {
+          console.error('Error updating profile metadata in Supabase:', e);
+          // Fallback: just update the name
+          await supabase
+            .from('profiles')
+            .update({ name: data.name })
+            .eq('id', user.id);
         }
         
         // Refresh user context to immediately remove the incomplete profile alert
         await refreshUser();
       }
     } catch (e) {
-      console.error('Error updating profile in Supabase:', e);
-      // If metadata column doesn't exist, try updating just the name
-      try {
-        await supabase
-          .from('profiles')
-          .update({ name: data.name })
-          .eq('id', user!.id);
-        await refreshUser();
-      } catch (innerError) {
-        console.error('Fallback update failed:', innerError);
-      }
+      console.error('Error in handleFinish:', e);
     }
     
     navigate('/home');

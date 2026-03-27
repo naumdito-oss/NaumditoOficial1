@@ -63,7 +63,7 @@ export function Register() {
       let message = err.message || 'Erro ao criar conta.';
       const errorMessage = message.toLowerCase();
       
-      if (errorMessage.includes('user already registered')) {
+      if (errorMessage.includes('user already registered') || err.code === 'user_already_exists') {
         message = 'Este e-mail já está cadastrado. Tente fazer login.';
       } else if (errorMessage.includes('password should be at least') || errorMessage.includes('password must be at least')) {
         message = 'A senha deve ter pelo menos 6 caracteres.';

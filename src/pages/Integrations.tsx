@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // Components
 import { BottomNav } from '../components/layout/BottomNav';
@@ -60,28 +61,52 @@ const INTEGRATIONS: Integration[] = [
  */
 export function Integrations() {
   const navigate = useNavigate();
+  const { user, updateMetadata } = useAuth();
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempKey, setTempKey] = useState('');
 
   useEffect(() => {
-    try {
-      const savedKeys = localStorage.getItem('naumdito_api_keys');
-      if (savedKeys) {
-        setKeys(JSON.parse(savedKeys));
+    if (user?.metadata?.api_keys) {
+      setKeys(user.metadata.api_keys);
+    } else {
+      // Fallback to localStorage for migration
+      try {
+        const savedKeys = localStorage.getItem('naumdito_api_keys');
+        if (savedKeys) {
+          const parsedKeys = JSON.parse(savedKeys);
+          setKeys(parsedKeys);
+          // Auto-migrate to Supabase if possible
+          if (user) {
+            updateMetadata({ api_keys: parsedKeys });
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing api keys:', e);
       }
-    } catch (e) {
-      console.error('Error parsing api keys:', e);
     }
-  }, []);
+  }, [user]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingId) {
       const newKeys = { ...keys, [editingId]: tempKey };
       setKeys(newKeys);
-      localStorage.setItem('naumdito_api_keys', JSON.stringify(newKeys));
-      setEditingId(null);
-      setTempKey('');
+      
+      try {
+        if (user) {
+          await updateMetadata({ api_keys: newKeys });
+        }
+        // Still keep in localStorage for offline access/fallback
+        localStorage.setItem('naumdito_api_keys', JSON.stringify(newKeys));
+        setEditingId(null);
+        setTempKey('');
+      } catch (err) {
+        console.error('Error saving keys to metadata:', err);
+        // Fallback to localStorage if Supabase fails
+        localStorage.setItem('naumdito_api_keys', JSON.stringify(newKeys));
+        setEditingId(null);
+        setTempKey('');
+      }
     }
   };
 

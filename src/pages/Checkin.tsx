@@ -113,16 +113,18 @@ export function Checkin() {
    * Handles saving the check-in data.
    * Validates that a feeling is selected before completing the check-in.
    */
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!feeling) {
       return;
     }
     
-    completeCheckin(feeling, tags, note);
-    setShowSuccess(true);
-    setTimeout(() => {
-      navigate('/home');
-    }, 2000);
+    const success = await completeCheckin(feeling, tags, note);
+    if (success) {
+      setShowSuccess(true);
+      setTimeout(() => {
+        navigate('/home');
+      }, 2000);
+    }
   };
 
   /**

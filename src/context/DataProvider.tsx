@@ -26,6 +26,7 @@ interface DataContextType {
   wishlist: WishlistItem[];
   empathyMessages: EmpathyMessage[];
   nextDatePlan: NextDatePlan | null;
+  nextDatePlans: NextDatePlan[];
   weeklyHistory: WeeklyProgress[];
   checkinHistory: CheckinHistoryItem[];
   achievements: Achievement[];
@@ -41,9 +42,11 @@ interface DataContextType {
   addPoints: (amount: number) => void;
   addEmpathyMessage: (message: Omit<EmpathyMessage, 'id' | 'createdAt'>) => void;
   removeEmpathyMessage: (id: string) => void;
+  addNextDatePlan: (plan: Omit<NextDatePlan, 'id' | 'updatedAt'>) => Promise<void>;
+  removeNextDatePlan: (id: string) => Promise<void>;
   updateNextDatePlan: (plan: Omit<NextDatePlan, 'updatedAt'>) => void;
   checkinCompleted: boolean;
-  completeCheckin: (feeling: string, tags: string[], note: string) => void;
+  completeCheckin: (feeling: string, tags: string[], note: string) => Promise<boolean>;
   microGestureCompleted: boolean;
   completeMicroGesture: () => void;
   updateWeeklyProgress: (percentage: number) => void;
@@ -74,6 +77,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyProgress[]>([]);
   const [checkinHistory, setCheckinHistory] = useState<CheckinHistoryItem[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [nextDatePlans, setNextDatePlans] = useState<NextDatePlan[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [pointsModal, setPointsModal] = useState({ isOpen: false, points: 0, reason: '' });
   const isUpdatingProfileRef = useRef(false);
 
@@ -87,6 +92,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setWishlist([]);
       setEmpathyMessages([]);
       setNextDatePlan(null);
+      setNextDatePlans([]);
       setCheckinCompleted(false);
       setMicroGestureCompleted(false);
       setWeeklyHistory([]);
@@ -130,13 +136,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('couple_id', user.coupleId)
         .order('created_at', { ascending: false });
-      if (agreementsData) setAgreements(agreementsData.map(a => ({
-        id: a.id,
-        text: a.text,
-        status: a.status,
-        justification: a.justification,
-        createdAt: a.created_at
-      })));
+      if (agreementsData) {
+        const filteredAgreements = agreementsData
+          .filter(a => !deletedIds.has(a.id))
+          .map(a => ({
+            id: a.id,
+            text: a.text,
+            status: a.status,
+            justification: a.justification,
+            createdAt: a.created_at
+          }));
+        setAgreements(filteredAgreements);
+      }
 
       // Load exchanges
       const { data: exchangesData } = await supabase
@@ -144,15 +155,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('couple_id', user.coupleId)
         .order('created_at', { ascending: false });
-      if (exchangesData) setExchanges(exchangesData.map(e => ({
-        id: e.id,
-        title: e.title,
-        description: e.description,
-        type: e.type,
-        status: e.status,
-        counterOffer: e.counter_offer,
-        createdAt: e.created_at
-      })));
+      if (exchangesData) {
+        const filteredExchanges = exchangesData
+          .filter(e => !deletedIds.has(e.id))
+          .map(e => ({
+            id: e.id,
+            title: e.title,
+            description: e.description,
+            type: e.type,
+            status: e.status,
+            counterOffer: e.counter_offer,
+            createdAt: e.created_at
+          }));
+        setExchanges(filteredExchanges);
+      }
 
       // Load wishlist
       const { data: wishlistData } = await supabase
@@ -160,14 +176,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('couple_id', user.coupleId)
         .order('created_at', { ascending: false });
-      if (wishlistData) setWishlist(wishlistData.map(w => ({
-        id: w.id,
-        link: w.link,
-        title: w.title,
-        image: w.image,
-        authorId: w.author_id,
-        createdAt: w.created_at
-      })));
+      if (wishlistData) {
+        const filteredWishlist = wishlistData
+          .filter(w => !deletedIds.has(w.id))
+          .map(w => ({
+            id: w.id,
+            link: w.link,
+            title: w.title,
+            image: w.image,
+            authorId: w.author_id,
+            createdAt: w.created_at
+          }));
+        setWishlist(filteredWishlist);
+      }
 
       // Load empathy messages
       const { data: empathyData } = await supabase
@@ -182,22 +203,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         createdAt: m.created_at
       })));
 
-      // Load next date plan
-      const { data: datePlanData } = await supabase
+      // Load next date plans (all of them)
+      const { data: datePlansData } = await supabase
         .from('next_date_plans')
         .select('*')
         .eq('couple_id', user.coupleId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-      if (datePlanData) setNextDatePlan({
-        title: datePlanData.title,
-        description: datePlanData.description,
-        location: datePlanData.location,
-        photo: datePlanData.photo,
-        programType: datePlanData.program_type,
-        updatedAt: datePlanData.updated_at
-      });
+        .order('date', { ascending: true });
+      
+      if (datePlansData) {
+        const mappedPlans = datePlansData.map(p => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          location: p.location,
+          photo: p.photo,
+          date: p.date,
+          programType: p.program_type as any,
+          updatedAt: p.updated_at
+        }));
+        setNextDatePlans(mappedPlans);
+        
+        // Set the next upcoming plan as the "nextDatePlan" for the home screen
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const upcoming = mappedPlans.find(p => p.date && new Date(p.date) >= now);
+        setNextDatePlan(upcoming || mappedPlans[mappedPlans.length - 1] || null);
+      }
 
       // Load weekly history
       const { data: historyData } = await supabase
@@ -265,13 +296,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const DAILY_POINTS_CAP = 100;
 
   useEffect(() => {
-    const checkCycles = () => {
+    const checkCycles = async () => {
       const storedStartOfDay = localStorage.getItem(STORAGE_KEYS.CURRENT_DAY_START);
       const currentStartOfDay = getStartOfDay();
 
       if (!storedStartOfDay) {
         localStorage.setItem(STORAGE_KEYS.CURRENT_DAY_START, currentStartOfDay);
       } else if (storedStartOfDay !== currentStartOfDay) {
+        // Reset daily status in DB if user is logged in
+        if (user?.id) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({ 
+                checkin_completed: false, 
+                micro_gesture_completed: false 
+              })
+              .eq('id', user.id);
+            console.log('Daily status reset in database');
+          } catch (error) {
+            console.error('Error resetting daily status in DB:', error);
+          }
+        }
+
         setCheckinCompleted(false);
         setMicroGestureCompleted(false);
         setDailyPoints(0);
@@ -371,8 +418,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const datePlanScore = (nextDatePlan && new Date(nextDatePlan.updatedAt) >= startOfWeek) ? 10 : 0;
 
       // 6. Engagement/Microgestures (20%) - Proxy using weekly points
-      // Reaching 500 weekly points (approx 70 per day) grants the full 20%
-      const engagementScore = Math.min(20, (weeklyPoints / 500) * 20);
+      // Reaching 350 weekly points (approx 50 per day) grants the full 20%
+      const engagementScore = Math.min(20, (weeklyPoints / 350) * 20);
 
       const total = checkinScore + agreementScore + exchangeScore + wishlistScore + datePlanScore + engagementScore;
       return Math.round(Math.min(100, total));
@@ -484,6 +531,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeAgreement = async (id: string) => {
+    // Add to deletedIds to filter out immediately in UI
+    setDeletedIds(prev => new Set(prev).add(id));
+    
     // Optimistic update using functional state to avoid stale closures
     let previousAgreements: Agreement[] = [];
     setAgreements(prev => {
@@ -496,17 +546,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         throw error;
       }
-      // Rely on real-time subscription for final sync, 
-      // but call fetchData as a fallback after a short delay
-      setTimeout(() => fetchData(), 500);
+      // Rely on real-time subscription for final sync
     } catch (error) {
       console.error('Error removing agreement:', error);
       setAgreements(previousAgreements); // Revert
+      setDeletedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
   const clearBrokenAgreements = async () => {
     if (!user?.coupleId) return;
+
+    const brokenIds = agreements.filter(a => a.status === 'broken').map(a => a.id);
+    if (brokenIds.length === 0) return;
+
+    // Add to deletedIds
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      brokenIds.forEach(id => next.add(id));
+      return next;
+    });
 
     // Optimistic update using functional state
     let previousAgreements: Agreement[] = [];
@@ -525,10 +588,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         throw error;
       }
-      setTimeout(() => fetchData(), 500);
     } catch (error) {
       console.error('Error clearing broken agreements:', error);
       setAgreements(previousAgreements); // Revert
+      setDeletedIds(prev => {
+        const next = new Set(prev);
+        brokenIds.forEach(id => next.delete(id));
+        return next;
+      });
     }
   };
 
@@ -639,6 +706,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeExchange = async (id: string) => {
+    // Add to deletedIds
+    setDeletedIds(prev => new Set(prev).add(id));
+
     // Optimistic update using functional state
     let previousExchanges: ExchangeItem[] = [];
     setExchanges(prev => {
@@ -651,10 +721,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         throw error;
       }
-      setTimeout(() => fetchData(), 500);
     } catch (error) {
       console.error('Error removing exchange:', error);
       setExchanges(previousExchanges); // Revert
+      setDeletedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -785,22 +859,79 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateNextDatePlan = async (plan: Omit<NextDatePlan, 'updatedAt'>) => {
+  const addNextDatePlan = async (plan: Omit<NextDatePlan, 'id' | 'updatedAt'>) => {
     if (!user?.id || !user?.coupleId) return;
 
-    const { error } = await supabase.from('next_date_plans').upsert({
+    const { data, error } = await supabase.from('next_date_plans').insert({
       couple_id: user.coupleId,
       author_id: user.id,
       title: plan.title,
       description: plan.description,
       location: plan.location,
       photo: plan.photo,
+      date: plan.date,
       program_type: plan.programType,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'couple_id' });
+    }).select().single();
 
     if (error) {
-      console.error('Error updating next date plan:', error);
+      console.error('Error adding date plan:', error);
+      return;
+    }
+
+    await fetchData();
+    
+    // Add points
+    const pointsToAdd = 40;
+    await addPoints(pointsToAdd);
+    showPoints(pointsToAdd, 'Encontro Planejado!');
+
+    await recordAchievement({
+      title: 'Planejador(a)',
+      description: `Você planejou um novo date: ${plan.title}`,
+      points: 30,
+      icon: 'event'
+    });
+  };
+
+  const removeNextDatePlan = async (id: string) => {
+    setDeletedIds(prev => new Set(prev).add(id));
+    setNextDatePlans(prev => prev.filter(p => p.id !== id));
+
+    try {
+      const { error } = await supabase.from('next_date_plans').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error removing date plan:', error);
+      await fetchData();
+      setDeletedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const updateNextDatePlan = async (plan: Omit<NextDatePlan, 'updatedAt'>) => {
+    if (!user?.id || !user?.coupleId) return;
+
+    if ('id' in plan && (plan as any).id) {
+      const { error } = await supabase.from('next_date_plans').update({
+        title: plan.title,
+        description: plan.description,
+        location: plan.location,
+        photo: plan.photo,
+        date: plan.date,
+        program_type: plan.programType,
+        updated_at: new Date().toISOString()
+      }).eq('id', (plan as any).id);
+      
+      if (error) {
+        console.error('Error updating next date plan:', error);
+        return;
+      }
+    } else {
+      await addNextDatePlan(plan as any);
       return;
     }
     
@@ -810,7 +941,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     // Add points
     const pointsToAdd = 40;
     await addPoints(pointsToAdd);
-    showPoints(pointsToAdd, 'Encontro Planejado!');
+    showPoints(pointsToAdd, 'Encontro Atualizado!');
 
     await recordAchievement({
       title: 'Encontro Planejado',
@@ -849,8 +980,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const completeCheckin = async (feeling: string, tags: string[], note: string) => {
-    if (!user?.id || !user?.coupleId) return;
+  const completeCheckin = async (feeling: string, tags: string[], note: string): Promise<boolean> => {
+    if (!user?.id || !user?.coupleId) return false;
 
     const { error: checkinError } = await supabase.from('checkins').insert({
       couple_id: user.coupleId,
@@ -863,15 +994,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     if (checkinError) {
       console.error('Error saving checkin:', checkinError);
-      return;
+      return false;
+    }
+
+    // Update local state immediately for better UX
+    setCheckinCompleted(true);
+
+    const { error: profileError } = await supabase.from('profiles').update({
+      checkin_completed: true
+    }).eq('id', user.id);
+
+    if (profileError) {
+      console.error('Error updating profile checkin status:', profileError);
+      setCheckinCompleted(false); // Revert if failed
+      return false;
     }
 
     // Manually refresh data to ensure UI updates
     await fetchData();
-
-    await supabase.from('profiles').update({
-      checkin_completed: true
-    }).eq('id', user.id);
 
     // Update points
     const pointsToAdd = 50;
@@ -898,6 +1038,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         link: '/checkin'
       });
     }
+    
+    return true;
   };
 
   const completeMicroGesture = async () => {
@@ -1050,6 +1192,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       wishlist,
       empathyMessages,
       nextDatePlan,
+      nextDatePlans,
       addAgreement,
       updateAgreement,
       removeAgreement,
@@ -1061,6 +1204,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       removeFromWishlist,
       addEmpathyMessage,
       removeEmpathyMessage,
+      addNextDatePlan,
+      removeNextDatePlan,
       updateNextDatePlan,
       addPoints,
       checkinCompleted,

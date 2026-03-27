@@ -11,6 +11,8 @@ export interface User {
   level: number;
   coupleId?: string;
   coupleCode?: string;
+  birthDate?: string;
+  anniversaryDate?: string;
   metadata?: any;
 }
 
@@ -85,10 +87,12 @@ export interface EmpathyMessage {
  * Represents a planned date or outing.
  */
 export interface NextDatePlan {
+  id: string;
   title: string;
   description: string;
   location: string;
   photo: string;
+  date?: string;
   programType: 'pipoca' | 'restaurante' | 'parque' | 'experiencia' | 'outro';
   updatedAt: string;
 }

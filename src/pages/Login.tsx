@@ -43,6 +43,8 @@ export function Login() {
       } else {
         navigate('/onboarding');
       }
+    } else if (!loading && !isAuthenticated) {
+      setIsLoading(false);
     }
   }, [isAuthenticated, loading, navigate]);
 
@@ -59,15 +61,12 @@ export function Login() {
     
     try {
       await login(email, password);
-      const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
-      if (onboardingCompleted) {
-        navigate('/home');
-      } else {
-        navigate('/onboarding');
-      }
+      // Do not navigate here. The useEffect will handle the redirect
+      // once the AuthContext state updates and isAuthenticated becomes true.
     } catch (err: any) {
+      console.error("Login error:", err);
+      console.error("Error message:", err.message);
       setError(translateAuthError(err.message));
-    } finally {
       setIsLoading(false);
     }
   };

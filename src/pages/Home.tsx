@@ -28,7 +28,7 @@ import { microGestures } from '../data/microGestures';
  */
 export function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { 
     points,
     level,
@@ -39,7 +39,8 @@ export function Home() {
     updateWeeklyProgress, 
     getCoupleStatus,
     pointsModal,
-    setPointsModal
+    setPointsModal,
+    nextDatePlan
   } = useData();
 
   const [dbGesture, setDbGesture] = useState<any>(null);
@@ -200,8 +201,20 @@ export function Home() {
   }, [user]);
   
   const isIncomplete = useMemo(() => {
+    // While loading, don't show the alert
+    if (loading) return false;
+    
+    // If onboarding was completed, don't show the alert unless critical data is missing
+    const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
+    
     const hasName = !!user?.name;
     const hasPhoto = !!user?.photoUrl;
+    
+    // If onboarding is completed, we're more lenient with other fields
+    if (onboardingCompleted) {
+      return !hasName || !hasPhoto;
+    }
+    
     const hasStory = !!userProfile?.ourStory;
     const hasLimits = !!userProfile?.limits?.respect;
     const hasPartner = !!userProfile?.partnerName;
@@ -353,6 +366,51 @@ export function Home() {
           </div>
         )}
 
+        {/* Partner Connection Invite */}
+        {!partnerProfile && user?.coupleCode && (
+          <div className="mt-6 p-6 md:p-8 rounded-[2rem] bg-gradient-to-br from-primary/10 to-peach-main/10 border border-primary/20 flex flex-col items-center text-center gap-4 relative overflow-hidden shadow-sm">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-peach-main/5 rounded-full blur-3xl -ml-10 -mb-10"></div>
+            
+            <div className="size-16 rounded-full bg-white dark:bg-slate-800 shadow-md flex items-center justify-center text-primary z-10 mb-2">
+              <span className="material-symbols-outlined text-3xl">favorite</span>
+            </div>
+            
+            <div className="z-10 max-w-md w-full">
+              <h3 className="text-xl md:text-2xl font-black text-navy-main dark:text-slate-100 mb-2">Convide seu amor</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                Para aproveitar todas as funcionalidades do app, você precisa conectar sua conta com a do seu parceiro(a).
+              </p>
+              
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <div className="bg-white dark:bg-slate-900 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner flex-1 max-w-[200px]">
+                  <span className="text-2xl font-black tracking-[0.2em] text-primary">{user.coupleCode}</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.coupleCode || '');
+                    alert('Código copiado!');
+                  }}
+                  className="size-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-primary hover:border-primary/30 transition-colors shadow-sm"
+                  title="Copiar código"
+                >
+                  <span className="material-symbols-outlined">content_copy</span>
+                </button>
+              </div>
+              
+              <a 
+                href={`https://wa.me/?text=${encodeURIComponent(`Amor, baixe o app e use nosso código de conexão: ${user.coupleCode}\n\nLink: ${window.location.origin}/register?code=${user.coupleCode}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-[#25D366]/20"
+              >
+                <span className="material-symbols-outlined">chat</span>
+                Compartilhar no WhatsApp
+              </a>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mt-4">
           
           {/* Left Column: Connection Status & Micro-gesture */}
@@ -479,6 +537,71 @@ export function Home() {
           {/* Right Column: Tools & Check-in */}
           <div className="lg:col-span-5 space-y-6 md:space-y-8">
             
+            {/* Next Date Plan (Sair da Rotina) */}
+            {nextDatePlan ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => navigate('/saia-da-rotina')}
+                className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm relative group cursor-pointer"
+              >
+                {nextDatePlan.photo ? (
+                  <div className="h-40 w-full overflow-hidden relative">
+                    <img 
+                      src={nextDatePlan.photo} 
+                      alt={nextDatePlan.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                    <div className="absolute bottom-4 left-6 right-6">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold text-white bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-widest">Próximo Date</span>
+                      </div>
+                      <h3 className="text-white text-xl font-black leading-tight">{nextDatePlan.title}</h3>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 md:p-8 bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-bold text-white bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-widest">Próximo Date</span>
+                    </div>
+                    <h3 className="text-white text-xl font-black leading-tight mb-2">{nextDatePlan.title}</h3>
+                  </div>
+                )}
+                <div className="p-6 md:p-8">
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-4 line-clamp-2 font-medium">
+                    {nextDatePlan.description}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-slate-400 text-xs font-bold">
+                      <span className="material-symbols-outlined text-[16px]">location_on</span>
+                      {nextDatePlan.location}
+                    </div>
+                    <span className="material-symbols-outlined text-peach-main">arrow_forward</span>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => navigate('/saia-da-rotina')}
+                className="bg-white dark:bg-slate-900/40 p-8 rounded-[2.5rem] shadow-sm border border-dashed border-peach-main/30 flex flex-col items-center justify-center text-center gap-4 cursor-pointer hover:bg-peach-main/5 transition-all group"
+              >
+                <div className="size-16 rounded-full bg-peach-main/10 flex items-center justify-center text-peach-main group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-3xl">add_circle</span>
+                </div>
+                <div>
+                  <h3 className="text-navy-main dark:text-white font-black text-xl tracking-tight">Escapar da Rotina</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Ainda não temos um plano para o próximo encontro.</p>
+                </div>
+                <div className="px-6 py-2 bg-peach-main text-white rounded-full text-xs font-black uppercase tracking-widest">
+                  Planejar Agora
+                </div>
+              </motion.div>
+            )}
+
             {/* Tools Grid */}
             <div className="space-y-4">
               <div className="flex justify-between items-center ml-2">

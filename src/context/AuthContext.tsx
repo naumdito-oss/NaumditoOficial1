@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => void;
   register: (name: string, email: string, partnerCode?: string, password?: string) => Promise<any>;
   updatePhoto: (file: File) => Promise<void>;
+  updateMetadata: (metadata: any) => Promise<void>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   channel: any | null;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [partner, setPartner] = useState<User | null>(null);
   const [channel, setChannel] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const fetchProfilePromiseRef = React.useRef<Promise<{success: boolean, error?: string}> | null>(null);
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -40,7 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore INITIAL_SESSION to prevent double fetching on mount
+      if (event === 'INITIAL_SESSION') return;
+      
       if (session?.user) {
         fetchUserProfile(session.user.id);
       } else {
@@ -53,36 +58,153 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*, couples(couple_code)')
-        .eq('id', userId)
-        .single();
+  const fetchUserProfile = async (userId: string): Promise<{success: boolean, error?: string}> => {
+    if (fetchProfilePromiseRef.current) {
+      return fetchProfilePromiseRef.current;
+    }
 
-      if (error) throw error;
+    const fetchPromise = (async () => {
+      try {
+        let { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*, couples(couple_code)')
+          .eq('id', userId)
+          .single();
 
-      if (profile) {
+        // If profile doesn't exist, try to create it
+        if (error && error.code === 'PGRST116') {
+          console.log('Profile not found, attempting to create one...');
+          const { data: userData } = await supabase.auth.getUser();
+          const userObj = userData?.user;
+          
+          if (userObj) {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: userId,
+                email: userObj.email,
+                name: userObj.user_metadata?.name || 'Usuário',
+              });
+              
+            if (!insertError) {
+              // Fetch again after creating
+              const retry = await supabase
+                .from('profiles')
+                .select('*, couples(couple_code)')
+                .eq('id', userId)
+                .single();
+              profile = retry.data;
+              error = retry.error;
+            } else {
+              error = insertError;
+            }
+          }
+        }
+
+        if (error || !profile) {
+          console.error('Error fetching user profile:', error || 'Profile not found');
+          await supabase.auth.signOut();
+          return { success: false, error: error?.message || 'Profile not found' };
+        }
+
+        console.log('Profile fetched successfully:', profile);
+        let currentCoupleId = profile.couple_id;
+        let currentCoupleCode = profile.couples?.couple_code;
+        let currentAnniversaryDate = profile.metadata?.anniversaryDate;
+
+        // If user logged in via OAuth and doesn't have a couple_id, create one or join existing
+        if (!currentCoupleId) {
+          const storedPartnerCode = localStorage.getItem('partner_code');
+          let joinedExisting = false;
+
+          if (storedPartnerCode) {
+            const { data: couple, error: coupleError } = await supabase
+              .from('couples')
+              .select('id, couple_code')
+              .eq('couple_code', storedPartnerCode)
+              .single();
+
+            if (couple && !coupleError) {
+              currentCoupleId = couple.id;
+              currentCoupleCode = couple.couple_code;
+              joinedExisting = true;
+              localStorage.removeItem('partner_code');
+            }
+          }
+
+          if (!joinedExisting) {
+            const { data: newCouple, error: newCoupleError } = await supabase
+              .from('couples')
+              .insert([{ couple_code: generateCode() }])
+              .select()
+              .single();
+
+            if (!newCoupleError && newCouple) {
+              currentCoupleId = newCouple.id;
+              currentCoupleCode = newCouple.couple_code;
+            }
+          }
+
+          if (currentCoupleId) {
+            await supabase
+              .from('profiles')
+              .update({ couple_id: currentCoupleId })
+              .eq('id', userId);
+          }
+        }
+
         const loggedUser: User = {
           email: profile.email,
           name: profile.name,
-          coupleId: profile.couple_id,
+          coupleId: currentCoupleId,
           points: profile.points || 0,
           level: profile.level || 1,
           photoUrl: profile.photo_url,
-          coupleCode: profile.couples?.couple_code,
+          coupleCode: currentCoupleCode,
           id: profile.id,
+          birthDate: profile.metadata?.birthDate,
+          anniversaryDate: currentAnniversaryDate || profile.metadata?.anniversaryDate,
           metadata: profile.metadata
         };
         setUser(loggedUser);
+        
+        // If the user has a name and coupleId, they likely completed onboarding
+        if (profile.name && currentCoupleId) {
+          localStorage.setItem('onboarding_completed', 'true');
+        }
+        
         fetchPartnerProfile(loggedUser.id, loggedUser.coupleId);
         connectSocket(loggedUser.coupleId);
+        return { success: true };
+      } catch (error: any) {
+        console.error('Error fetching user profile:', error);
+        return { success: false, error: error?.message || 'Unknown error' };
+      } finally {
+        fetchProfilePromiseRef.current = null;
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    } finally {
-      setLoading(false);
+    })();
+
+    fetchProfilePromiseRef.current = fetchPromise;
+    return fetchPromise;
+  };
+
+  const updateMetadata = async (newMetadata: any): Promise<void> => {
+    if (!user || !user.id) return;
+    
+    try {
+      const mergedMetadata = { ...(user.metadata || {}), ...newMetadata };
+      const { error } = await supabase
+        .from('profiles')
+        .update({ metadata: mergedMetadata })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      await refreshUser();
+    } catch (e) {
+      console.error('Error updating metadata:', e);
+      throw e;
     }
   };
 
@@ -177,14 +299,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Authenticates a user with email and password.
    */
   const login = async (email: string, password?: string) => {
+    console.log('Attempting login for:', email);
     if (!password) throw new Error('A senha é obrigatória.');
     
-    const { error } = await supabase.auth.signInWithPassword({
+    // Clear any stale local storage data from previous sessions
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('onboarding_completed');
+    localStorage.removeItem('partner_code');
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+    
+    console.log('Login successful, session:', data.session);
+    if (data.session?.user) {
+      const result = await fetchUserProfile(data.session.user.id);
+      if (!result.success) {
+        throw new Error(`Failed to fetch user profile: ${result.error || 'Unknown error'}. Please try again.`);
+      }
+    }
   };
 
   /**
@@ -192,6 +331,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const register = async (name: string, email: string, partnerCode?: string, password?: string) => {
     if (!password) throw new Error('A senha é obrigatória.');
+
+    // Clear any stale local storage data from previous sessions
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('onboarding_completed');
+    localStorage.removeItem('partner_code');
 
     let coupleId = null;
 
@@ -223,7 +367,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (authError) {
       console.error("Auth Error:", authError);
-      throw new Error(`Erro na autenticação: ${authError.message}`);
+      throw authError;
     }
 
     // Se a sessão for nula após o registro, significa que a confirmação de e-mail está ativada no Supabase.
@@ -276,11 +420,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Refresh user profile to ensure the state has the new coupleId
-        await fetchUserProfile(authData.user.id);
+        const result = await fetchUserProfile(authData.user.id);
+        if (!result.success) {
+          throw new Error(`Failed to fetch user profile after registration: ${result.error || 'Unknown error'}. Please try logging in.`);
+        }
       }
     }
 
-    return authData.user;
+    // Fetch the couple code to return it
+    let coupleCode = null;
+    if (coupleId) {
+      const { data: couple } = await supabase
+        .from('couples')
+        .select('couple_code')
+        .eq('id', coupleId)
+        .single();
+      if (couple) {
+        coupleCode = couple.couple_code;
+      }
+    }
+
+    return { ...authData.user, coupleCode };
   };
 
   /**
@@ -295,7 +455,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setPartner(null);
       setChannel(null);
+      localStorage.removeItem('onboarding_completed');
+      localStorage.removeItem('user_profile');
+      localStorage.removeItem('supabase_url');
+      localStorage.removeItem('supabase_anon_key');
+      localStorage.removeItem('naumdito_api_keys');
     }
+  };
+
+  /**
+   * Resizes an image file to a maximum width/height while maintaining aspect ratio.
+   */
+  const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height *= maxWidth / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width *= maxHeight / height;
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8)); // Compress to 80% quality JPEG
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
   };
 
   /**
@@ -309,25 +513,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
+      let finalUrl = '';
+
       // Upload image to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        console.error('Upload Error Details:', uploadError);
-        throw new Error(`Erro no upload: ${uploadError.message}`);
+        console.warn('Upload to bucket failed, falling back to base64:', uploadError.message);
+        // Fallback to base64 with resizing to prevent payload too large errors
+        finalUrl = await resizeImage(file, 800, 800);
+      } else {
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+        finalUrl = publicUrl;
       }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
 
       // Update profile with new URL
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ photo_url: publicUrl })
+        .update({ photo_url: finalUrl })
         .eq('id', user.id);
 
       if (updateError) {
@@ -335,7 +543,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
       }
 
-      setUser({ ...user, photoUrl: publicUrl });
+      setUser({ ...user, photoUrl: finalUrl });
     } catch (error: any) {
       console.error('Error updating photo:', error);
       throw new Error(error.message || 'Erro ao atualizar a foto. Tente novamente.');
@@ -343,7 +551,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, partner, login, logout, register, updatePhoto, refreshUser, isAuthenticated: !!user, channel, loading }}>
+    <AuthContext.Provider value={{ user, partner, login, logout, register, updatePhoto, updateMetadata, refreshUser, isAuthenticated: !!user, channel, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
