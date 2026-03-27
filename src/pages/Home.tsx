@@ -287,7 +287,89 @@ export function Home() {
     const hasPartner = !!userProfile?.partnerName;
     
     return !hasName || !hasPhoto || !hasStory || !hasLimits || !hasPartner;
-  }, [user, userProfile]);
+  }, [user, userProfile, loading]);
+
+  const suggestions = useMemo(() => {
+    const goals = userProfile?.goals || [];
+    const list: any[] = [];
+
+    if (goals.includes('Diminuir brigas') || goals.includes('Conversar melhor')) {
+      list.push({
+        title: 'Comunicação Não-Violenta',
+        description: 'Que tal praticar um exercício de escuta ativa hoje?',
+        icon: 'record_voice_over',
+        action: () => navigate('/sos'),
+        color: 'bg-blue-500'
+      });
+    }
+    if (goals.includes('Aumentar a conexão') || goals.includes('Melhorar a intimidade')) {
+      list.push({
+        title: 'Noite de Surpresas',
+        description: 'Prepare algo inesperado para o seu amor.',
+        icon: 'card_giftcard',
+        action: () => navigate('/surprise'),
+        color: 'bg-peach-main'
+      });
+    }
+    if (goals.includes('Planejar o futuro')) {
+      list.push({
+        title: 'Mural de Sonhos',
+        description: 'Conversem sobre os planos para os próximos 5 anos.',
+        icon: 'auto_awesome_motion',
+        action: () => navigate('/agreements'),
+        color: 'bg-indigo-500'
+      });
+    }
+    if (goals.includes('Ter mais tempo de qualidade')) {
+      list.push({
+        title: 'Encontro Semanal',
+        description: 'Bloqueie a agenda para um momento só de vocês.',
+        icon: 'calendar_today',
+        action: () => navigate('/calendar'),
+        color: 'bg-rose-500'
+      });
+    }
+    if (goals.includes('Resolver conflitos')) {
+      list.push({
+        title: 'Mediação com Especialista',
+        description: 'Use a IA para mediar uma conversa difícil.',
+        icon: 'psychology',
+        action: () => navigate('/sos'),
+        color: 'bg-amber-500'
+      });
+    }
+    if (goals.includes('Aprender sobre o parceiro')) {
+      list.push({
+        title: 'Mapa de Limites',
+        description: 'Descubra o que é importante para o seu parceiro.',
+        icon: 'map',
+        action: () => navigate('/limits-map'),
+        color: 'bg-emerald-500'
+      });
+    }
+    if (goals.includes('Reparar um momento difícil')) {
+      list.push({
+        title: 'Caixa de Empatia',
+        description: 'Envie uma mensagem sincera para curar feridas.',
+        icon: 'volunteer_activism',
+        action: () => navigate('/empathy-box'),
+        color: 'bg-emerald-500'
+      });
+    }
+
+    // Default suggestion if none match
+    if (list.length === 0) {
+      list.push({
+        title: 'Gesto de Carinho',
+        description: 'Pequenas ações mudam o dia. Veja o gesto de hoje!',
+        icon: 'favorite',
+        action: () => {},
+        color: 'bg-pink-500'
+      });
+    }
+
+    return list;
+  }, [userProfile, navigate]);
 
   /**
    * Prepares the data for the weekly evolution chart.
@@ -380,7 +462,7 @@ export function Home() {
             <div className="min-w-0">
               <p className="text-[9px] md:text-xs font-black text-slate-400 uppercase tracking-[0.15em] mb-0 leading-none">Bem-vindo</p>
               <h2 className="text-navy-main dark:text-slate-100 text-base md:text-xl font-black leading-tight tracking-tight truncate">
-                {user?.name?.split(' ')[0] || 'Usuário'}
+                {user?.nickname || user?.name?.split(' ')[0] || 'Usuário'}
               </h2>
             </div>
           </div>
@@ -599,6 +681,55 @@ export function Home() {
                       </div>
                       <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed relative z-10 italic">"{msg.text}"</p>
                     </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Personalized Suggestions */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-navy-main dark:text-slate-100 text-lg font-bold">Sugestões para Vocês</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Baseado nos seus objetivos</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {suggestions.map((s, i) => (
+                  <motion.div
+                    key={i}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={s.action}
+                    className="p-5 rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer group"
+                  >
+                    <div className={`size-12 rounded-2xl flex items-center justify-center text-white shrink-0 ${s.color} shadow-lg shadow-${s.color.split('-')[1]}/20 group-hover:scale-110 transition-transform`}>
+                      <span className="material-symbols-outlined">{s.icon}</span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-navy-main dark:text-slate-100 text-sm">{s.title}</h4>
+                      <p className="text-slate-500 dark:text-slate-400 text-[10px] font-medium leading-tight">{s.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Fields Section */}
+            {userProfile?.customFields && userProfile.customFields.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-navy-main dark:text-slate-100 text-lg font-bold">Nossos Detalhes</h3>
+                  <span className="material-symbols-outlined text-peach-main">auto_awesome</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {userProfile.customFields.map((field: any, index: number) => (
+                    <div 
+                      key={index}
+                      className="p-5 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm"
+                    >
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{field.label}</p>
+                      <p className="font-bold text-navy-main dark:text-slate-100 text-sm">{field.value}</p>
+                    </div>
                   ))}
                 </div>
               </div>

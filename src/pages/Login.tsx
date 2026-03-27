@@ -38,6 +38,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Redirect to home or onboarding if already authenticated
   useEffect(() => {
@@ -62,6 +63,12 @@ export function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!acceptedTerms) {
+      setError('Você deve aceitar os termos de privacidade para continuar.');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -220,12 +227,28 @@ export function Login() {
                 </div>
               </div>
 
+              {/* Privacy Terms Checkbox */}
+              <div className="flex items-start gap-3 px-2 py-1">
+                <div className="flex items-center h-5">
+                  <input
+                    id="terms"
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                  />
+                </div>
+                <label htmlFor="terms" className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
+                  Eu li e aceito os <span className="text-primary dark:text-peach-main font-bold hover:underline cursor-pointer">Termos de Uso</span> e a <span className="text-primary dark:text-peach-main font-bold hover:underline cursor-pointer">Política de Privacidade</span>.
+                </label>
+              </div>
+
               <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={acceptedTerms ? { scale: 1.02 } : {}}
+                whileTap={acceptedTerms ? { scale: 0.98 } : {}}
                 type="submit" 
-                disabled={isLoading}
-                className="w-full h-14 mt-4 rounded-2xl bg-primary dark:bg-peach-main text-white dark:text-slate-900 font-bold text-lg shadow-lg shadow-primary/20 dark:shadow-peach-main/20 hover:bg-primary-light dark:hover:bg-peach-light transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                disabled={isLoading || !acceptedTerms}
+                className="w-full h-14 mt-4 rounded-2xl bg-primary dark:bg-peach-main text-white dark:text-slate-900 font-bold text-lg shadow-lg shadow-primary/20 dark:shadow-peach-main/20 hover:bg-primary-light dark:hover:bg-peach-light transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>

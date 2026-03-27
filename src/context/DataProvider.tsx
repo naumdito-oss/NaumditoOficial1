@@ -348,7 +348,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               .from('profiles')
               .update({ 
                 checkin_completed: false, 
-                micro_gesture_completed: false 
+                micro_gesture_completed: false,
+                daily_points: 0
               })
               .eq('id', user.id);
             console.log('Daily status reset in database');
@@ -374,6 +375,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (storedStartOfWeek !== currentStartOfWeek) {
         const finalProgress = parseInt(localStorage.getItem(STORAGE_KEYS.CURRENT_WEEK_PROGRESS) || '0', 10);
         
+        if (user?.id) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({ 
+                weekly_points: 0
+              })
+              .eq('id', user.id);
+            console.log('Weekly points reset in database');
+          } catch (error) {
+            console.error('Error resetting weekly points in DB:', error);
+          }
+        }
+
         setWeeklyHistory(prev => {
           const newHistory = [...prev, {
             weekStarting: storedStartOfWeek,
@@ -1133,14 +1148,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addPoints = async (amount: number) => {
-    if (!user?.id || dailyPoints >= DAILY_POINTS_CAP) return;
-    
-    const pointsToAdd = Math.min(amount, DAILY_POINTS_CAP - dailyPoints);
-    const newPoints = points + pointsToAdd;
-    const newDailyPoints = dailyPoints + pointsToAdd;
-    const newWeeklyPoints = weeklyPoints + pointsToAdd;
+    if (!user?.id) return;
 
-    // Optimistically update local state
+    // Fetch latest points from DB to avoid race conditions
+    const { data: profile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('points, daily_points, weekly_points')
+      .eq('id', user.id)
+      .single();
+
+    if (fetchError || !profile) {
+      console.error('Error fetching latest points:', fetchError);
+      return;
+    }
+
+    if (profile.daily_points >= DAILY_POINTS_CAP) return;
+    
+    const pointsToAdd = Math.min(amount, DAILY_POINTS_CAP - profile.daily_points);
+    const newPoints = profile.points + pointsToAdd;
+    const newDailyPoints = profile.daily_points + pointsToAdd;
+    const newWeeklyPoints = profile.weekly_points + pointsToAdd;
+
+    // Update local state
     setPoints(newPoints);
     setDailyPoints(newDailyPoints);
     setWeeklyPoints(newWeeklyPoints);
@@ -1154,9 +1183,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Error updating points:', error);
       // Revert if failed
-      setPoints(points);
-      setDailyPoints(dailyPoints);
-      setWeeklyPoints(weeklyPoints);
+      setPoints(profile.points);
+      setDailyPoints(profile.daily_points);
+      setWeeklyPoints(profile.weekly_points);
     }
   };
 

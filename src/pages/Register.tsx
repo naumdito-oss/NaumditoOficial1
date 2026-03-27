@@ -43,6 +43,7 @@ export function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [registeredCode, setRegisteredCode] = useState('');
   const [error, setError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   /**
    * Handles the registration form submission.
@@ -54,6 +55,11 @@ export function Register() {
     setError('');
 
     // Client-side validation
+    if (!acceptedTerms) {
+      setError('Você deve aceitar os termos de privacidade para continuar.');
+      return;
+    }
+
     if (password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres.');
       return;
@@ -68,8 +74,6 @@ export function Register() {
       
       // If no partner code was provided, show the generated code to share
       if (!partnerCode && newUser?.coupleCode) {
-        // Clear the temporary code after successful registration
-        localStorage.removeItem('my_invite_code');
         setRegisteredCode(newUser.coupleCode);
       } else {
         // If linked successfully, proceed to onboarding
@@ -358,12 +362,28 @@ export function Register() {
               <p className="text-[10px] text-slate-500 dark:text-slate-400 ml-2 font-medium">Se seu parceiro já tem conta, insira o código dele aqui.</p>
             </div>
 
+            {/* Privacy Terms Checkbox */}
+            <div className="flex items-start gap-3 px-2 py-1">
+              <div className="flex items-center h-5">
+                <input
+                  id="terms"
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                />
+              </div>
+              <label htmlFor="terms" className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
+                Eu li e aceito os <span className="text-primary dark:text-peach-main font-bold hover:underline cursor-pointer">Termos de Uso</span> e a <span className="text-primary dark:text-peach-main font-bold hover:underline cursor-pointer">Política de Privacidade</span>.
+              </label>
+            </div>
+
             <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={acceptedTerms ? { scale: 1.02 } : {}}
+              whileTap={acceptedTerms ? { scale: 0.98 } : {}}
               type="submit" 
-              disabled={isLoading}
-              className="w-full h-14 mt-4 rounded-2xl bg-primary dark:bg-peach-main text-white dark:text-slate-900 font-bold text-lg shadow-lg shadow-primary/20 dark:shadow-peach-main/20 hover:bg-primary-light dark:hover:bg-peach-light transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              disabled={isLoading || !acceptedTerms}
+              className="w-full h-14 mt-4 rounded-2xl bg-primary dark:bg-peach-main text-white dark:text-slate-900 font-bold text-lg shadow-lg shadow-primary/20 dark:shadow-peach-main/20 hover:bg-primary-light dark:hover:bg-peach-light transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="material-symbols-outlined animate-spin">progress_activity</span>

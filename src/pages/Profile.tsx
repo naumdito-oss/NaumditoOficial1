@@ -211,6 +211,19 @@ export function Profile() {
               <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
             </button>
 
+            <button 
+              onClick={() => navigate('/limits-map')}
+              className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 md:hover:border-primary/20 transition-all group active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined">visibility_off</span>
+                </div>
+                <span className="font-black text-navy-main dark:text-slate-200 uppercase tracking-widest text-xs">Mapa de Limites</span>
+              </div>
+              <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </button>
+
             <button onClick={() => navigate('/integrations')} className="flex items-center justify-between p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 md:hover:border-primary/20 transition-all group active:scale-[0.98]">
               <div className="flex items-center gap-4">
                 <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">

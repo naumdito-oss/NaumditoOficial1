@@ -34,6 +34,7 @@ import { Privacy } from './pages/Privacy';
 import { EmpathyBox } from './pages/EmpathyBox';
 import { SaiaDaRotina } from './pages/SaiaDaRotina';
 import { AdminGestures } from './pages/AdminGestures';
+import { LimitsMap } from './pages/LimitsMap';
 
 import { useTheme } from './hooks/useTheme';
 
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="/empathy-box" element={<ProtectedRoute><EmpathyBox /></ProtectedRoute>} />
             <Route path="/next-date" element={<ProtectedRoute><SaiaDaRotina /></ProtectedRoute>} />
             <Route path="/admin-gestures" element={<ProtectedRoute><AdminGestures /></ProtectedRoute>} />
+            <Route path="/limits-map" element={<ProtectedRoute><LimitsMap /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </DataProvider>

@@ -121,20 +121,32 @@ export const notificationService = {
 
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
 
       // 2. Check Anniversary
       if (profile.couples?.anniversary_date) {
         const anniv = new Date(profile.couples.anniversary_date);
+        // Today
         if (anniv.getMonth() === today.getMonth() && anniv.getDate() === today.getDate()) {
           await this.ensureNotificationExists(userId, 'event', 'Feliz Aniversário de Namoro!', 'Hoje é o dia especial de vocês! Que tal celebrar?', 'celebration', 'bg-amber-100 text-amber-500', todayStr);
+        }
+        // Upcoming (7 days)
+        if (anniv.getMonth() === nextWeek.getMonth() && anniv.getDate() === nextWeek.getDate()) {
+          await this.ensureNotificationExists(userId, 'event', 'Aniversário de Namoro chegando!', 'Em 7 dias vocês completam mais um ciclo juntos. Já pensou no presente?', 'notification_important', 'bg-amber-50 text-amber-400', todayStr);
         }
       }
 
       // 3. Check Partner Birthday
       if (partner?.metadata?.birthDate) {
         const bday = new Date(partner.metadata.birthDate);
+        // Today
         if (bday.getMonth() === today.getMonth() && bday.getDate() === today.getDate()) {
           await this.ensureNotificationExists(userId, 'event', `Aniversário de ${partner.name}!`, `Hoje é o aniversário do seu amor! Não esqueça de dar os parabéns.`, 'cake', 'bg-pink-100 text-pink-500', todayStr);
+        }
+        // Upcoming (7 days)
+        if (bday.getMonth() === nextWeek.getMonth() && bday.getDate() === nextWeek.getDate()) {
+          await this.ensureNotificationExists(userId, 'event', `Aniversário de ${partner.name} chegando!`, `Faltam 7 dias para o aniversário do seu amor. Tempo de preparar uma surpresa!`, 'alarm', 'bg-pink-50 text-pink-400', todayStr);
         }
       }
 
@@ -147,6 +159,7 @@ export const notificationService = {
       for (const specialDate of allSpecialDates) {
         if (specialDate.date && specialDate.label) {
           const date = new Date(specialDate.date);
+          // Today
           if (date.getMonth() === today.getMonth() && date.getDate() === today.getDate()) {
             await this.ensureNotificationExists(
               userId, 
@@ -155,6 +168,18 @@ export const notificationService = {
               `Hoje é um dia especial: ${specialDate.label}. Que tal celebrar juntos?`, 
               'star', 
               'bg-indigo-100 text-indigo-500', 
+              todayStr
+            );
+          }
+          // Upcoming (7 days)
+          if (date.getMonth() === nextWeek.getMonth() && date.getDate() === nextWeek.getDate()) {
+            await this.ensureNotificationExists(
+              userId, 
+              'event', 
+              `${specialDate.label} chegando!`, 
+              `Em 7 dias teremos: ${specialDate.label}. Prepare-se para esse momento!`, 
+              'event_upcoming', 
+              'bg-indigo-50 text-indigo-400', 
               todayStr
             );
           }

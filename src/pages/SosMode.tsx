@@ -307,6 +307,37 @@ export function SosMode() {
                           await notificationService.createNotification({
                             user_id: partnerId,
                             type: 'alert',
+                            title: 'Preciso de Espaço',
+                            description: 'Seu parceiro pediu um pouco de espaço agora. Ele(a) voltará a falar quando estiver pronto(a).',
+                            icon: 'space_dashboard',
+                            color: 'bg-blue-400',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Pedido de espaço enviado!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">space_dashboard</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Preciso de Espaço</h3>
+                      <p className="text-xs text-slate-500 font-medium">Comunique que você precisa de um momento sozinho(a) sem pressão.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'alert',
                             title: 'Palavra de Segurança',
                             description: 'Seu parceiro usou a palavra de segurança. Parem a conversa agora.',
                             icon: 'lock',
@@ -417,24 +448,86 @@ export function SosMode() {
                           await notificationService.createNotification({
                             user_id: partnerId,
                             type: 'gesture',
-                            title: 'Eu te amo (SOS)',
-                            description: 'Mesmo no meio da discussão, seu parceiro quer que você saiba que ele ainda te ama.',
-                            icon: 'favorite',
-                            color: 'bg-red-500',
+                            title: 'Podemos Recomeçar?',
+                            description: 'Seu parceiro sugeriu que vocês parem a discussão e recomecem a conversa com mais calma.',
+                            icon: 'restart_alt',
+                            color: 'bg-indigo-500',
                             link: '/sos'
                           });
                         }
                       }
-                      showFeedback('success', 'Mensagem de amor enviada!');
+                      showFeedback('success', 'Sugestão de recomeço enviada!');
                     }}
                     className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
                   >
-                    <div className="size-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
-                      <span className="material-symbols-outlined text-3xl">favorite</span>
+                    <div className="size-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">restart_alt</span>
                     </div>
                     <div className="text-left flex-1">
-                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Eu te amo (SOS)</h3>
-                      <p className="text-xs text-slate-500 font-medium">Lembre seu parceiro que o amor é maior que a discussão atual.</p>
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Podemos Recomeçar?</h3>
+                      <p className="text-xs text-slate-500 font-medium">Sugerir um "reset" na conversa para evitar palavras que machucam.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'gesture',
+                            title: 'Sinto muito (SOS)',
+                            description: 'Seu parceiro quer se desculpar por algo dito ou feito durante a discussão.',
+                            icon: 'sentiment_very_satisfied',
+                            color: 'bg-emerald-500',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Pedido de desculpas enviado!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">sentiment_very_satisfied</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Sinto muito</h3>
+                      <p className="text-xs text-slate-500 font-medium">Um gesto de humildade para desarmar o conflito.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'gesture',
+                            title: 'Quero te ouvir',
+                            description: 'Seu parceiro está pronto para te ouvir sem interrupções. Pode falar.',
+                            icon: 'hearing',
+                            color: 'bg-cyan-500',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Disponibilidade para ouvir enviada!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">hearing</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Quero te ouvir</h3>
+                      <p className="text-xs text-slate-500 font-medium">Demonstre que você está disposto(a) a escutar o lado dele(a).</p>
                     </div>
                     <span className="material-symbols-outlined text-slate-300">chevron_right</span>
                   </button>

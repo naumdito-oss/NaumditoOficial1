@@ -13,45 +13,61 @@ export type SpecialDate = {
   date: string;
 };
 
+export type CustomField = {
+  id: string;
+  label: string;
+  value: string;
+};
+
 export type OnboardingData = {
   name: string;
+  nickname: string;
   gender: string;
   birthDate: string;
   anniversaryDate: string;
   partnerName: string;
   photoUrl: string;
   goals: string[];
+  customGoals: string[];
   emojiLanguage: string;
   musicStyle: string;
   travelStyle: string[];
+  customTravelStyle: string;
   loveLanguages: string[];
   ourStory: string;
   specialDates: SpecialDate[];
+  customFields: CustomField[];
   limits: {
     respect: string;
     triggers: string;
     sensitiveThemes: string;
+    custom: CustomField[];
   };
 };
 
 const INITIAL_DATA: OnboardingData = {
   name: '',
+  nickname: '',
   gender: '',
   birthDate: '',
   anniversaryDate: '',
   partnerName: '',
   photoUrl: '',
   goals: [],
+  customGoals: [],
   emojiLanguage: '',
   musicStyle: '',
   travelStyle: [],
+  customTravelStyle: '',
   loveLanguages: [],
   ourStory: '',
   specialDates: [],
+  customFields: [],
   limits: {
     respect: '',
     triggers: '',
     sensitiveThemes: '',
+    custom: [],
   },
 };
 
@@ -94,24 +110,56 @@ export const Onboarding: React.FC = () => {
             const stored = localStorage.getItem('user_profile');
             const localData = stored ? JSON.parse(stored) : {};
             
-            setData(prev => ({
-              ...prev,
+            const merged = {
+              ...INITIAL_DATA,
               ...dbMetadata,
               ...localData,
+            };
+
+            // Ensure nested objects and arrays are properly merged/initialized
+            setData({
+              ...merged,
+              goals: merged.goals || [],
+              customGoals: merged.customGoals || [],
+              travelStyle: merged.travelStyle || [],
+              loveLanguages: merged.loveLanguages || [],
+              specialDates: merged.specialDates || [],
+              customFields: merged.customFields || [],
+              limits: {
+                ...INITIAL_DATA.limits,
+                ...(merged.limits || {}),
+                custom: (merged.limits?.custom) || []
+              },
               name: localData.name || profile.name || user.name || '',
               photoUrl: localData.photoUrl || profile.photo_url || user.photoUrl || '',
-            }));
+            });
           }
         } catch (e) {
           // Fallback to localStorage if metadata column doesn't exist yet
           const stored = localStorage.getItem('user_profile');
           const localData = stored ? JSON.parse(stored) : {};
-          setData(prev => ({
-            ...prev,
+          
+          const merged = {
+            ...INITIAL_DATA,
             ...localData,
+          };
+
+          setData({
+            ...merged,
+            goals: merged.goals || [],
+            customGoals: merged.customGoals || [],
+            travelStyle: merged.travelStyle || [],
+            loveLanguages: merged.loveLanguages || [],
+            specialDates: merged.specialDates || [],
+            customFields: merged.customFields || [],
+            limits: {
+              ...INITIAL_DATA.limits,
+              ...(merged.limits || {}),
+              custom: (merged.limits?.custom) || []
+            },
             name: localData.name || user.name || '',
             photoUrl: localData.photoUrl || user.photoUrl || '',
-          }));
+          });
         }
       };
       
@@ -178,6 +226,7 @@ export const Onboarding: React.FC = () => {
         try {
           const updateData: any = { 
             name: data.name,
+            nickname: data.nickname,
             metadata: metadataToSave
           };
           const { error } = await supabase
@@ -191,7 +240,7 @@ export const Onboarding: React.FC = () => {
           // Fallback: just update the name
           await supabase
             .from('profiles')
-            .update({ name: data.name })
+            .update({ name: data.name, nickname: data.nickname })
             .eq('id', user.id);
         }
         
@@ -262,6 +311,19 @@ export const Onboarding: React.FC = () => {
                   placeholder="Como você se chama?"
                 />
                 <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+              </div>
+            </div>
+            <div className="space-y-2 relative group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Apelido Carinhoso do Casal</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={data.nickname}
+                  onChange={(e) => setData({ ...data, nickname: e.target.value })}
+                  className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
+                  placeholder="Ex: Chuchuzinhos"
+                />
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">favorite</span>
               </div>
             </div>
             <div className="space-y-2 relative group">
@@ -398,26 +460,59 @@ export const Onboarding: React.FC = () => {
       title: 'O que você busca?',
       subtitle: 'Selecione seus principais objetivos com o NaumDito.',
       content: (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {['Diminuir brigas', 'Conversar melhor', 'Reparar um momento difícil', 'Aumentar a conexão', 'Planejar o futuro', 'Melhorar a intimidade'].map((goal) => (
-            <button
-              key={goal}
-              onClick={() => {
-                const goals = data.goals.includes(goal)
-                  ? data.goals.filter((g) => g !== goal)
-                  : [...data.goals, goal];
-                setData({ ...data, goals });
-              }}
-              className={`p-6 rounded-3xl border text-left transition-all group ${
-                data.goals.includes(goal)
-                  ? 'bg-peach-main border-peach-main text-white shadow-xl shadow-peach-main/30'
-                  : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-peach-main/50'
-              }`}
-            >
-              <div className="font-black uppercase tracking-widest text-[10px] mb-1 opacity-60">Objetivo</div>
-              <div className="font-black text-sm md:text-base">{goal}</div>
-            </button>
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {['Diminuir brigas', 'Conversar melhor', 'Reparar um momento difícil', 'Aumentar a conexão', 'Planejar o futuro', 'Melhorar a intimidade'].map((goal) => (
+              <button
+                key={goal}
+                onClick={() => {
+                  const goals = data.goals.includes(goal)
+                    ? data.goals.filter((g) => g !== goal)
+                    : [...data.goals, goal];
+                  setData({ ...data, goals });
+                }}
+                className={`p-6 rounded-3xl border text-left transition-all group ${
+                  data.goals.includes(goal)
+                    ? 'bg-peach-main border-peach-main text-white shadow-xl shadow-peach-main/30'
+                    : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-peach-main/50'
+                }`}
+              >
+                <div className="font-black uppercase tracking-widest text-[10px] mb-1 opacity-60">Objetivo</div>
+                <div className="font-black text-sm md:text-base">{goal}</div>
+              </button>
+            ))}
+            {data.customGoals.map((goal, index) => (
+              <div key={index} className="relative group">
+                <input
+                  type="text"
+                  value={goal}
+                  onChange={(e) => {
+                    const customGoals = [...data.customGoals];
+                    customGoals[index] = e.target.value;
+                    setData({ ...data, customGoals });
+                  }}
+                  className="w-full p-6 rounded-3xl border bg-peach-main/10 border-peach-main text-peach-main font-black text-sm md:text-base outline-none"
+                  placeholder="Seu objetivo personalizado..."
+                />
+                <button 
+                  onClick={() => {
+                    const customGoals = data.customGoals.filter((_, i) => i !== index);
+                    setData({ ...data, customGoals });
+                  }}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg"
+                >
+                  <span className="material-symbols-outlined text-xs">close</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setData({ ...data, customGoals: [...data.customGoals, ''] })}
+            className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 text-slate-400 hover:text-peach-main hover:border-peach-main transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
+          >
+            <span className="material-symbols-outlined">add</span>
+            Adicionar Outro Objetivo
+          </button>
         </div>
       ),
     },
@@ -426,25 +521,36 @@ export const Onboarding: React.FC = () => {
       title: 'Estilo de Viagem',
       subtitle: 'Como vocês gostam de explorar o mundo?',
       content: (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {['Aventura', 'Tranquila', 'Romântica', 'Luxo', 'Econômica', 'Cultural'].map((style) => (
-            <button
-              key={style}
-              onClick={() => {
-                const travelStyle = data.travelStyle.includes(style)
-                  ? data.travelStyle.filter((s) => s !== style)
-                  : [...data.travelStyle, style];
-                setData({ ...data, travelStyle });
-              }}
-              className={`p-6 rounded-3xl border text-center transition-all flex flex-col items-center justify-center gap-2 ${
-                data.travelStyle.includes(style)
-                  ? 'bg-peach-main border-peach-main text-white shadow-xl shadow-peach-main/30'
-                  : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-peach-main/30'
-              }`}
-            >
-              <span className="text-sm font-black uppercase tracking-widest">{style}</span>
-            </button>
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {['Aventura', 'Tranquila', 'Romântica', 'Luxo', 'Econômica', 'Cultural'].map((style) => (
+              <button
+                key={style}
+                onClick={() => {
+                  const travelStyle = data.travelStyle.includes(style)
+                    ? data.travelStyle.filter((s) => s !== style)
+                    : [...data.travelStyle, style];
+                  setData({ ...data, travelStyle });
+                }}
+                className={`p-6 rounded-3xl border text-center transition-all flex flex-col items-center justify-center gap-2 ${
+                  data.travelStyle.includes(style)
+                    ? 'bg-peach-main border-peach-main text-white shadow-xl shadow-peach-main/30'
+                    : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-peach-main/30'
+                }`}
+              >
+                <span className="text-sm font-black uppercase tracking-widest">{style}</span>
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Outro estilo ou observação (ex: Não gosto de viajar)</label>
+            <textarea
+              value={data.customTravelStyle}
+              onChange={(e) => setData({ ...data, customTravelStyle: e.target.value })}
+              className="w-full p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none font-medium text-sm"
+              placeholder="Conte-nos mais sobre suas preferências de viagem..."
+            />
+          </div>
         </div>
       ),
     },
@@ -481,46 +587,111 @@ export const Onboarding: React.FC = () => {
       title: 'Mapa de Limites',
       subtitle: 'Defina o que é sensível para você.',
       content: (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2 relative group">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Limites de Respeito</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={data.limits.respect}
-                onChange={(e) => setData({ ...data, limits: { ...data.limits, respect: e.target.value } })}
-                className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
-                placeholder="O que não pode faltar?"
-              />
-              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2 relative group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Limites de Respeito</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={data.limits.respect}
+                  onChange={(e) => setData({ ...data, limits: { ...data.limits, respect: e.target.value } })}
+                  className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
+                  placeholder="O que não pode faltar?"
+                />
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+              </div>
             </div>
-          </div>
-          <div className="space-y-2 relative group">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Gatilhos Emocionais</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={data.limits.triggers}
-                onChange={(e) => setData({ ...data, limits: { ...data.limits, triggers: e.target.value } })}
-                className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
-                placeholder="O que te deixa magoado(a)?"
-              />
-              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+            <div className="space-y-2 relative group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Gatilhos Emocionais</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={data.limits.triggers}
+                  onChange={(e) => setData({ ...data, limits: { ...data.limits, triggers: e.target.value } })}
+                  className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
+                  placeholder="O que te deixa magoado(a)?"
+                />
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+              </div>
             </div>
-          </div>
-          <div className="space-y-2 md:col-span-2 relative group">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Temas Sensíveis</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={data.limits.sensitiveThemes}
-                onChange={(e) => setData({ ...data, limits: { ...data.limits, sensitiveThemes: e.target.value } })}
-                className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
-                placeholder="Assuntos que exigem cuidado?"
-              />
-              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+            <div className="space-y-2 md:col-span-2 relative group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Temas Sensíveis</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={data.limits.sensitiveThemes}
+                  onChange={(e) => setData({ ...data, limits: { ...data.limits, sensitiveThemes: e.target.value } })}
+                  className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none transition-all font-bold"
+                  placeholder="Assuntos que exigem cuidado?"
+                />
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
+              </div>
             </div>
+
+            {data.limits.custom.map((custom, index) => (
+              <div key={custom.id} className="p-4 bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-white/10 flex flex-col gap-4 md:col-span-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-peach-main">Limite Personalizado</span>
+                  <button 
+                    onClick={() => {
+                      const customLimits = data.limits.custom.filter(c => c.id !== custom.id);
+                      setData({ ...data, limits: { ...data.limits, custom: customLimits } });
+                    }}
+                    className="text-red-500 hover:text-red-600 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-xl">delete</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Título do Limite</label>
+                    <input
+                      type="text"
+                      value={custom.label}
+                      onChange={(e) => {
+                        const customLimits = [...data.limits.custom];
+                        customLimits[index].label = e.target.value;
+                        setData({ ...data, limits: { ...data.limits, custom: customLimits } });
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-peach-main outline-none font-bold text-sm"
+                      placeholder="Ex: Espaço Pessoal"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Descrição</label>
+                    <input
+                      type="text"
+                      value={custom.value}
+                      onChange={(e) => {
+                        const customLimits = [...data.limits.custom];
+                        customLimits[index].value = e.target.value;
+                        setData({ ...data, limits: { ...data.limits, custom: customLimits } });
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-peach-main outline-none font-bold text-sm"
+                      placeholder="Descreva seu limite..."
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          <button
+            onClick={() => {
+              const newLimit: CustomField = {
+                id: Math.random().toString(36).substr(2, 9),
+                label: '',
+                value: ''
+              };
+              setData({ ...data, limits: { ...data.limits, custom: [...data.limits.custom, newLimit] } });
+            }}
+            className="w-full p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 text-slate-400 hover:text-peach-main hover:border-peach-main transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
+          >
+            <span className="material-symbols-outlined">add</span>
+            Adicionar Novo Limite
+          </button>
+
           <div className="md:col-span-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex gap-3 items-start border border-blue-100 dark:border-blue-900/30">
             <span className="material-symbols-outlined text-blue-500 text-xl">info</span>
             <p className="text-xs text-slate-600 dark:text-blue-200 font-medium leading-relaxed">
@@ -530,33 +701,75 @@ export const Onboarding: React.FC = () => {
         </div>
       ),
     },
-    // Step 6: Our Story
+    // Step 7: Personalização Extra
     {
-      title: 'Nossa História',
-      subtitle: 'Conte um pouco sobre a jornada de vocês.',
+      title: 'Personalização Extra',
+      subtitle: 'Adicione outros campos que são importantes para vocês.',
       content: (
-        <div className="space-y-4">
-          <div className="space-y-2 relative group">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Como se conheceram?</label>
-            <div className="relative">
-              <textarea
-                value={data.ourStory}
-                onChange={(e) => setData({ ...data, ourStory: e.target.value })}
-                className="w-full p-5 pr-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-peach-main outline-none min-h-[200px] font-medium text-sm"
-                placeholder="Conte os detalhes desse momento especial..."
-              />
-              <span className="material-symbols-outlined absolute right-4 top-5 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">edit</span>
-            </div>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            {data.customFields.map((field, index) => (
+              <div key={field.id} className="relative p-6 bg-white dark:bg-white/5 rounded-3xl border border-slate-100 dark:border-white/10 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">O que é? (ex: Comida Favorita)</label>
+                    <input
+                      type="text"
+                      value={field.label}
+                      onChange={(e) => {
+                        const customFields = [...data.customFields];
+                        customFields[index].label = e.target.value;
+                        setData({ ...data, customFields });
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-peach-main outline-none font-bold text-sm"
+                      placeholder="Título do campo"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Resposta</label>
+                    <input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) => {
+                        const customFields = [...data.customFields];
+                        customFields[index].value = e.target.value;
+                        setData({ ...data, customFields });
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-peach-main outline-none font-bold text-sm"
+                      placeholder="Sua resposta"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    const customFields = data.customFields.filter((_, i) => i !== index);
+                    setData({ ...data, customFields });
+                  }}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg"
+                >
+                  <span className="material-symbols-outlined text-xs">close</span>
+                </button>
+              </div>
+            ))}
           </div>
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex gap-3 items-start border border-amber-100 dark:border-amber-900/30">
-            <span className="material-symbols-outlined text-amber-500 text-xl">history_edu</span>
-            <p className="text-xs text-slate-600 dark:text-amber-200 font-medium leading-relaxed">
-              Registrar sua história ajuda o NaumDito a entender o contexto da relação e sugerir atividades que resgatem memórias positivas.
-            </p>
-          </div>
+
+          <button
+            onClick={() => {
+              const newField: CustomField = {
+                id: Math.random().toString(36).substr(2, 9),
+                label: '',
+                value: ''
+              };
+              setData({ ...data, customFields: [...data.customFields, newField] });
+            }}
+            className="w-full p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 text-slate-400 hover:text-peach-main hover:border-peach-main transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
+          >
+            <span className="material-symbols-outlined">add</span>
+            Adicionar Campo Personalizado (+)
+          </button>
         </div>
-      ),
-    },
+      )
+    }
   ];
 
   const progress = ((currentStep + 1) / steps.length) * 100;

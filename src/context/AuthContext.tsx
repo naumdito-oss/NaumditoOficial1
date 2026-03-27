@@ -170,15 +170,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (!joinedExisting) {
+            // Check if there's a pre-generated code for this session (from Register page)
+            const myInviteCode = localStorage.getItem('my_invite_code');
+            const codeToUse = myInviteCode || generateCode();
+            
             const { data: newCouple, error: newCoupleError } = await supabase
               .from('couples')
-              .insert([{ couple_code: generateCode() }])
+              .insert([{ couple_code: codeToUse }])
               .select()
               .single();
 
             if (!newCoupleError && newCouple) {
               currentCoupleId = newCouple.id;
               currentCoupleCode = newCouple.couple_code;
+              // Clear the temporary code if it was used
+              if (myInviteCode) {
+                // We keep it for a bit longer to ensure register() also sees it if needed
+                // but fetchUserProfile is the main place it's used now
+                localStorage.removeItem('my_invite_code');
+              }
             }
           }
 
@@ -193,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const loggedUser: User = {
           email: profile.email,
           name: profile.name,
+          nickname: profile.nickname || profile.metadata?.nickname,
           coupleId: currentCoupleId,
           points: profile.points || 0,
           level: profile.level || 1,
@@ -408,20 +419,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Se temos sessão, o usuário está logado e o RLS (auth.uid()) vai funcionar.
     if (authData.user) {
       // 1. Tentar atualizar o perfil (caso uma trigger já tenha criado) ou inserir um novo
-      const { error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .upsert({ 
           id: authData.user.id, 
           name, 
           email 
-        });
+        })
+        .select('couple_id')
+        .single();
       
       if (profileError) {
         console.error("Profile Error Details:", profileError);
         throw new Error(`Erro ao salvar perfil: ${profileError.message}. Verifique as políticas RLS da tabela 'profiles'.`);
       }
 
-      // 2. Criar um novo casal se não houver código de parceiro
+      // Check if profile already has a couple_id (might have been set by fetchUserProfile or a trigger)
+      if (profile?.couple_id) {
+        coupleId = profile.couple_id;
+      }
+
+      // 2. Criar um novo casal se não houver código de parceiro e nenhum casal vinculado ainda
       if (!coupleId) {
         const codeToUse = customCoupleCode || generateCode();
         
