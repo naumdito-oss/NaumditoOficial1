@@ -8,6 +8,11 @@ import { useAuth } from '../context/AuthContext';
 const translateAuthError = (msg: string) => {
   if (!msg) return 'Ocorreu um erro inesperado. Tente novamente.';
   const lowerMsg = msg.toLowerCase();
+  
+  if (lowerMsg.includes('failed to fetch') || lowerMsg.includes('network error')) {
+    return 'Erro de conexão com o servidor. Verifique se as variáveis de ambiente do Supabase estão configuradas corretamente ou sua conexão com a internet.';
+  }
+  
   if (lowerMsg.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
   if (lowerMsg.includes('user already registered')) return 'Este e-mail já está cadastrado. Tente fazer login.';
   if (lowerMsg.includes('password should be at least') || lowerMsg.includes('password must be at least')) return 'A senha deve ter pelo menos 6 caracteres.';

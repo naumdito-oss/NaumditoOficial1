@@ -78,8 +78,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [checkinHistory, setCheckinHistory] = useState<CheckinHistoryItem[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [nextDatePlans, setNextDatePlans] = useState<NextDatePlan[]>([]);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => {
+    const stored = localStorage.getItem('deleted_ids');
+    if (!stored) return new Set();
+    try {
+      return new Set(JSON.parse(stored));
+    } catch (e) {
+      return new Set();
+    }
+  });
+  const deletedIdsRef = useRef<Set<string>>(deletedIds);
   const [pointsModal, setPointsModal] = useState({ isOpen: false, points: 0, reason: '' });
+
+  useEffect(() => {
+    localStorage.setItem('deleted_ids', JSON.stringify(Array.from(deletedIds)));
+    deletedIdsRef.current = deletedIds;
+  }, [deletedIds]);
   const isUpdatingProfileRef = useRef(false);
 
   const fetchData = React.useCallback(async () => {
@@ -110,6 +124,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('daily_points');
       localStorage.removeItem(STORAGE_KEYS.CURRENT_DAY_START);
       localStorage.removeItem(STORAGE_KEYS.CURRENT_WEEK_START);
+      localStorage.removeItem('deleted_ids');
+      setDeletedIds(new Set());
+      deletedIdsRef.current = new Set();
       return;
     }
 
@@ -135,14 +152,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Load agreements
-      const { data: agreementsData } = await supabase
+      const { data: agreementsData, error: agreementsError } = await supabase
         .from('agreements')
         .select('*')
         .eq('couple_id', user.coupleId)
         .order('created_at', { ascending: false });
+      
+      if (agreementsError) {
+        console.error('Error fetching agreements:', agreementsError);
+      }
+
       if (agreementsData) {
         const filteredAgreements = agreementsData
-          .filter(a => !deletedIds.has(a.id))
+          .filter(a => !deletedIdsRef.current.has(a.id))
           .map(a => ({
             id: a.id,
             text: a.text,
@@ -154,14 +176,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Load exchanges
-      const { data: exchangesData } = await supabase
+      const { data: exchangesData, error: exchangesError } = await supabase
         .from('exchanges')
         .select('*')
         .eq('couple_id', user.coupleId)
         .order('created_at', { ascending: false });
+
+      if (exchangesError) {
+        console.error('Error fetching exchanges:', exchangesError);
+      }
+
       if (exchangesData) {
         const filteredExchanges = exchangesData
-          .filter(e => !deletedIds.has(e.id))
+          .filter(e => !deletedIdsRef.current.has(e.id))
           .map(e => ({
             id: e.id,
             title: e.title,
@@ -182,7 +209,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .order('created_at', { ascending: false });
       if (wishlistData) {
         const filteredWishlist = wishlistData
-          .filter(w => !deletedIds.has(w.id))
+          .filter(w => !deletedIdsRef.current.has(w.id))
           .map(w => ({
             id: w.id,
             link: w.link,
@@ -200,13 +227,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('couple_id', user.coupleId)
         .order('created_at', { ascending: false });
-      if (empathyData) setEmpathyMessages(empathyData.map(m => ({
-        id: m.id,
-        text: m.text,
-        vibe: m.vibe,
-        createdAt: m.created_at,
-        authorId: m.author_id
-      })));
+      if (empathyData) {
+        setEmpathyMessages(empathyData
+          .filter(m => !deletedIdsRef.current.has(m.id))
+          .map(m => ({
+            id: m.id,
+            text: m.text,
+            vibe: m.vibe,
+            createdAt: m.created_at,
+            authorId: m.author_id
+          })));
+      }
 
       // Load next date plans (all of them)
       const { data: datePlansData } = await supabase
@@ -216,16 +247,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .order('date', { ascending: true });
       
       if (datePlansData) {
-        const mappedPlans = datePlansData.map(p => ({
-          id: p.id,
-          title: p.title,
-          description: p.description,
-          location: p.location,
-          photo: p.photo,
-          date: p.date,
-          programType: p.program_type as any,
-          updatedAt: p.updated_at
-        }));
+        const mappedPlans = datePlansData
+          .filter(p => !deletedIdsRef.current.has(p.id))
+          .map(p => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            location: p.location,
+            photo: p.photo,
+            date: p.date,
+            programType: p.program_type as any,
+            updatedAt: p.updated_at
+          }));
         setNextDatePlans(mappedPlans);
         
         // Set the next upcoming plan as the "nextDatePlan" for the home screen
@@ -536,10 +569,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeAgreement = async (id: string) => {
+    if (!user?.coupleId) return;
+
     // Add to deletedIds to filter out immediately in UI
-    setDeletedIds(prev => new Set(prev).add(id));
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      deletedIdsRef.current = next;
+      return next;
+    });
     
-    // Optimistic update using functional state to avoid stale closures
+    // Optimistic update
     let previousAgreements: Agreement[] = [];
     setAgreements(prev => {
       previousAgreements = [...prev];
@@ -547,17 +587,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const { error } = await supabase.from('agreements').delete().eq('id', id);
+      // Use couple_id in the query to respect RLS policies
+      const { error, data } = await supabase
+        .from('agreements')
+        .delete()
+        .eq('id', id)
+        .eq('couple_id', user.coupleId)
+        .select();
+
       if (error) {
         throw error;
       }
-      // Rely on real-time subscription for final sync
+
+      if (!data || data.length === 0) {
+        console.warn('Agreement deletion returned no data. It might already be deleted or RLS blocked it.');
+      }
+      
+      // Success - item remains in deletedIdsRef to prevent reappearance in this session
     } catch (error) {
       console.error('Error removing agreement:', error);
-      setAgreements(previousAgreements); // Revert
+      setAgreements(previousAgreements); // Revert UI
       setDeletedIds(prev => {
         const next = new Set(prev);
         next.delete(id);
+        deletedIdsRef.current = next;
         return next;
       });
     }
@@ -573,6 +626,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setDeletedIds(prev => {
       const next = new Set(prev);
       brokenIds.forEach(id => next.add(id));
+      deletedIdsRef.current = next;
       return next;
     });
 
@@ -584,14 +638,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('agreements')
         .delete()
         .eq('couple_id', user.coupleId)
-        .eq('status', 'broken');
+        .eq('status', 'broken')
+        .select();
       
       if (error) {
         throw error;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No broken agreements were deleted. They might already be gone or RLS blocked it.');
       }
     } catch (error) {
       console.error('Error clearing broken agreements:', error);
@@ -599,6 +658,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setDeletedIds(prev => {
         const next = new Set(prev);
         brokenIds.forEach(id => next.delete(id));
+        deletedIdsRef.current = next;
         return next;
       });
     }
@@ -711,10 +771,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeExchange = async (id: string) => {
-    // Add to deletedIds
-    setDeletedIds(prev => new Set(prev).add(id));
+    if (!user?.coupleId) return;
 
-    // Optimistic update using functional state
+    // Add to deletedIds immediately
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      deletedIdsRef.current = next;
+      return next;
+    });
+
+    // Optimistic update
     let previousExchanges: ExchangeItem[] = [];
     setExchanges(prev => {
       previousExchanges = [...prev];
@@ -722,16 +789,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const { error } = await supabase.from('exchanges').delete().eq('id', id);
-      if (error) {
-        throw error;
+      // Use couple_id in the query to respect RLS policies
+      const { error, data } = await supabase
+        .from('exchanges')
+        .delete()
+        .eq('id', id)
+        .eq('couple_id', user.coupleId)
+        .select();
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        console.warn('Exchange deletion returned no data. It might already be deleted or RLS blocked it.');
       }
     } catch (error) {
       console.error('Error removing exchange:', error);
-      setExchanges(previousExchanges); // Revert
+      // Revert
+      setExchanges(previousExchanges);
       setDeletedIds(prev => {
         const next = new Set(prev);
         next.delete(id);
+        deletedIdsRef.current = next;
         return next;
       });
     }
@@ -806,22 +884,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromWishlist = async (id: string) => {
+    // Add to deletedIds
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      deletedIdsRef.current = next;
+      return next;
+    });
+
     // Optimistic update using functional state
     let previousWishlist: WishlistItem[] = [];
     setWishlist(prev => {
       previousWishlist = [...prev];
       return prev.filter(item => item.id !== id);
     });
-
+ 
     try {
-      const { error } = await supabase.from('wishlist_items').delete().eq('id', id);
+      const { error, data } = await supabase
+        .from('wishlist_items')
+        .delete()
+        .eq('id', id)
+        .select();
+      
       if (error) {
         throw error;
       }
-      setTimeout(() => fetchData(), 500);
+
+      if (!data || data.length === 0) {
+        console.warn('Wishlist item deletion returned no data. It might already be deleted or RLS blocked it.');
+      }
+      // Rely on real-time subscription for final sync
     } catch (error) {
       console.error('Error removing from wishlist:', error);
       setWishlist(previousWishlist); // Revert
+      setDeletedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        deletedIdsRef.current = next;
+        return next;
+      });
     }
   };
 
@@ -878,6 +979,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeEmpathyMessage = async (id: string) => {
+    // Add to deletedIds
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      deletedIdsRef.current = next;
+      return next;
+    });
+
     // Optimistic update using functional state
     let previousMessages: EmpathyMessage[] = [];
     setEmpathyMessages(prev => {
@@ -886,14 +995,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const { error } = await supabase.from('empathy_messages').delete().eq('id', id);
+      const { error, data } = await supabase
+        .from('empathy_messages')
+        .delete()
+        .eq('id', id)
+        .select();
+      
       if (error) {
         throw error;
       }
-      setTimeout(() => fetchData(), 500);
+
+      if (!data || data.length === 0) {
+        console.warn('Empathy message deletion returned no data. It might already be deleted or RLS blocked it.');
+      }
+      // Rely on real-time subscription for final sync
     } catch (error) {
       console.error('Error removing empathy message:', error);
       setEmpathyMessages(previousMessages); // Revert
+      setDeletedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        deletedIdsRef.current = next;
+        return next;
+      });
     }
   };
 
@@ -933,18 +1057,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeNextDatePlan = async (id: string) => {
-    setDeletedIds(prev => new Set(prev).add(id));
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      deletedIdsRef.current = next;
+      return next;
+    });
     setNextDatePlans(prev => prev.filter(p => p.id !== id));
 
     try {
-      const { error } = await supabase.from('next_date_plans').delete().eq('id', id);
+      const { error, data } = await supabase
+        .from('next_date_plans')
+        .delete()
+        .eq('id', id)
+        .select();
+      
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        console.warn('Next date plan deletion returned no data. It might already be deleted or RLS blocked it.');
+      }
     } catch (error) {
       console.error('Error removing date plan:', error);
       await fetchData();
       setDeletedIds(prev => {
         const next = new Set(prev);
         next.delete(id);
+        deletedIdsRef.current = next;
         return next;
       });
     }

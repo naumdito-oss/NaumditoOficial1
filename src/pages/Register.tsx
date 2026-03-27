@@ -63,7 +63,9 @@ export function Register() {
       let message = err.message || 'Erro ao criar conta.';
       const errorMessage = message.toLowerCase();
       
-      if (errorMessage.includes('user already registered') || err.code === 'user_already_exists') {
+      if (errorMessage.includes('failed to fetch') || errorMessage.includes('network error')) {
+        message = 'Erro de conexão com o servidor. Verifique se as variáveis de ambiente do Supabase estão configuradas corretamente ou sua conexão com a internet.';
+      } else if (errorMessage.includes('user already registered') || err.code === 'user_already_exists') {
         message = 'Este e-mail já está cadastrado. Tente fazer login.';
       } else if (errorMessage.includes('password should be at least') || errorMessage.includes('password must be at least')) {
         message = 'A senha deve ter pelo menos 6 caracteres.';
