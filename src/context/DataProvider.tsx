@@ -904,6 +904,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .from('wishlist_items')
         .delete()
         .eq('id', id)
+        .eq('couple_id', user.coupleId)
         .select();
       
       if (error) {
@@ -999,6 +1000,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .from('empathy_messages')
         .delete()
         .eq('id', id)
+        .eq('couple_id', user.coupleId)
         .select();
       
       if (error) {
@@ -1070,6 +1072,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .from('next_date_plans')
         .delete()
         .eq('id', id)
+        .eq('couple_id', user.coupleId)
         .select();
       
       if (error) throw error;

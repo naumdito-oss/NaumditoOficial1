@@ -10,7 +10,7 @@ interface AuthContextType {
   partner: User | null;
   login: (email: string, password?: string) => Promise<void>;
   logout: () => void;
-  register: (name: string, email: string, partnerCode?: string, password?: string) => Promise<any>;
+  register: (name: string, email: string, partnerCode?: string, password?: string, customCoupleCode?: string) => Promise<any>;
   updatePhoto: (file: File) => Promise<void>;
   updateMetadata: (metadata: any) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -20,6 +20,18 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * Generates a random 6-character alphanumeric code.
+ */
+export const generateCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
 
 /**
  * Provider component that wraps the app and provides authentication state.
@@ -122,6 +134,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Profile fetched successfully:', profile);
         let currentCoupleId = profile.couple_id;
         let currentCoupleCode = profile.couples?.couple_code;
+        
+        // Handle case where couples might be an array or join failed but we have couple_id
+        if (!currentCoupleCode && currentCoupleId) {
+           const { data: coupleData } = await supabase
+             .from('couples')
+             .select('couple_code')
+             .eq('id', currentCoupleId)
+             .single();
+           if (coupleData) {
+             currentCoupleCode = coupleData.couple_code;
+           }
+        }
+
         let currentAnniversaryDate = profile.metadata?.anniversaryDate;
 
         // If user logged in via OAuth and doesn't have a couple_id, create one or join existing
@@ -302,14 +327,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  /**
-   * Generates a random 6-character alphanumeric code.
-   */
-  const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-
-  /**
-   * Authenticates a user with email and password.
-   */
   const login = async (email: string, password?: string) => {
     console.log('Attempting login for:', email);
     if (!password) throw new Error('A senha é obrigatória.');
@@ -341,7 +358,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Registers a new user and optionally links them to a partner.
    */
-  const register = async (name: string, email: string, partnerCode?: string, password?: string) => {
+  const register = async (name: string, email: string, partnerCode?: string, password?: string, customCoupleCode?: string) => {
     if (!password) throw new Error('A senha é obrigatória.');
 
     // Clear any stale local storage data from previous sessions
@@ -406,9 +423,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 2. Criar um novo casal se não houver código de parceiro
       if (!coupleId) {
+        const codeToUse = customCoupleCode || generateCode();
+        
         const { data: newCouple, error: newCoupleError } = await supabase
           .from('couples')
-          .insert([{ couple_code: generateCode() }])
+          .insert([{ couple_code: codeToUse }])
           .select()
           .single();
 

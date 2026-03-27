@@ -19,6 +19,20 @@ export function Register() {
   const [searchParams] = useSearchParams();
   const { register } = useAuth();
   
+  // Generate a unique code for this user session if they don't have one
+  // This fulfills the requirement: "o código de convite deve ser unico para cada usuário ao acessar"
+  const [myInviteCode] = useState(() => {
+    const saved = localStorage.getItem('my_invite_code');
+    if (saved) return saved;
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    localStorage.setItem('my_invite_code', result);
+    return result;
+  });
+  
   // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,10 +62,14 @@ export function Register() {
     setIsLoading(true);
     
     try {
-      const newUser = await register(name, email, partnerCode, password);
+      // Pass the generated invite code to register if no partner code is provided
+      // This ensures: "o mesmo código deve ser salvo no banco de dados"
+      const newUser = await register(name, email, partnerCode, password, myInviteCode);
       
       // If no partner code was provided, show the generated code to share
       if (!partnerCode && newUser?.coupleCode) {
+        // Clear the temporary code after successful registration
+        localStorage.removeItem('my_invite_code');
         setRegisteredCode(newUser.coupleCode);
       } else {
         // If linked successfully, proceed to onboarding
@@ -258,6 +276,13 @@ export function Register() {
             <div className="hidden md:flex flex-col items-center mb-8">
               <h1 className="text-3xl font-bold text-navy-main dark:text-white text-center tracking-tight">Crie sua conta</h1>
               <p className="text-slate-500 dark:text-slate-400 text-center mt-2">Comece sua jornada de conexão</p>
+            </div>
+
+            {/* Display the unique invite code */}
+            <div className="mb-6 p-4 rounded-2xl bg-primary/5 dark:bg-peach-main/5 border border-primary/10 dark:border-peach-main/10 text-center">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest mb-1">Seu código de convite único</p>
+              <p className="text-2xl font-black text-primary dark:text-peach-main tracking-[0.2em]">{myInviteCode}</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Este será seu código para convidar seu parceiro(a).</p>
             </div>
 
             {error && (

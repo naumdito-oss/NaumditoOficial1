@@ -60,22 +60,26 @@ export function SosMode() {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `
         Atue como um especialista em Comunicação Não-Violenta (CNV) e mediação de conflitos.
-        Analise o seguinte desabafo e reescreva-o seguindo os 4 pilares da CNV:
-        1. Observação (fatos sem julgamento)
-        2. Sentimento (como se sente)
-        3. Necessidade (o que precisa)
-        4. Pedido (ação concreta)
+        Sua missão é transformar a mensagem abaixo em uma comunicação baseada em empatia, necessidades e sentimentos, seguindo estritamente os 4 pilares da CNV de Marshall Rosenberg:
+        
+        1. Observação: Descreva os fatos concretos que estão afetando você, sem julgamentos ou avaliações.
+        2. Sentimento: Expresse como você se sente em relação ao que observou (ex: "sinto-me frustrado", não "sinto que você...").
+        3. Necessidade: Identifique a necessidade ou valor que está gerando esse sentimento (ex: "preciso de apoio", "valorizo a organização").
+        4. Pedido: Faça um pedido claro, positivo e acionável para atender à sua necessidade.
 
-        Mantenha o tom pessoal e autêntico, mas remova acusações, generalizações ("sempre", "nunca") e críticas destrutivas.
-        Transforme o texto em uma mensagem construtiva que convide ao diálogo.
+        Regras Críticas:
+        - Remova qualquer tom de acusação, culpa ou crítica.
+        - Elimine generalizações como "sempre", "nunca", "todo mundo".
+        - Mantenha a essência do que a pessoa quer comunicar, mas de forma que o parceiro consiga ouvir sem se colocar na defensiva.
+        - O resultado deve ser uma mensagem pronta para ser enviada.
+
+        Texto original para refinar: "${text}"
         
-        Texto original: "${text}"
-        
-        Retorne APENAS o texto reescrito, sem explicações adicionais.
+        Retorne APENAS o texto reescrito em português, sem explicações, introduções ou conclusões.
       `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
       });
       
@@ -214,9 +218,9 @@ export function SosMode() {
                       {isRefining ? (
                         <span className="material-symbols-outlined animate-spin text-sm">refresh</span>
                       ) : (
-                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                        <span className="material-symbols-outlined text-sm">psychology</span>
                       )}
-                      {isRefining ? 'Analisando...' : 'Refinar com IA'}
+                      {isRefining ? 'Analisando...' : 'Refinar com Especialista'}
                     </button>
                   </div>
                   
@@ -290,6 +294,147 @@ export function SosMode() {
                     <div className="text-left flex-1">
                       <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Pedir Tempo (Time-Out)</h3>
                       <p className="text-xs text-slate-500 font-medium">Notifique seu parceiro que você precisa de 20min para se acalmar.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'alert',
+                            title: 'Palavra de Segurança',
+                            description: 'Seu parceiro usou a palavra de segurança. Parem a conversa agora.',
+                            icon: 'lock',
+                            color: 'bg-red-600',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Palavra de Segurança enviada!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">lock</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Palavra de Segurança</h3>
+                      <p className="text-xs text-slate-500 font-medium">Pare a discussão imediatamente com um sinal de respeito mútuo.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'gesture',
+                            title: 'Abraço de Reconexão',
+                            description: 'Seu parceiro está pedindo um abraço de 30 segundos para acalmar os ânimos.',
+                            icon: 'groups',
+                            color: 'bg-pink-500',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Pedido de abraço enviado!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">groups</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Abraço de 30 Segundos</h3>
+                      <p className="text-xs text-slate-500 font-medium">Reconectem-se fisicamente para baixar o cortisol e a tensão.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'gesture',
+                            title: 'Mudar de Ambiente',
+                            description: 'Seu parceiro sugere que vocês mudem de ambiente ou saiam para caminhar um pouco.',
+                            icon: 'directions_walk',
+                            color: 'bg-teal-500',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Sugestão de mudança enviada!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">directions_walk</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Mudar de Ambiente</h3>
+                      <p className="text-xs text-slate-500 font-medium">Sugerir uma caminhada ou apenas trocar de cômodo para desanuviar.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      window.open('https://www.google.com/search?q=terapia+de+casal+online', '_blank');
+                      showFeedback('success', 'Abrindo busca por terapeutas...');
+                    }}
+                    className="p-6 bg-indigo-600 text-white rounded-3xl shadow-lg shadow-indigo-600/20 flex items-center gap-4 hover:bg-indigo-700 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">medical_services</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-white text-lg">Marcar Terapia de Casal</h3>
+                      <p className="text-xs text-white/80 font-medium">Encontre um profissional para ajudar na mediação do relacionamento.</p>
+                    </div>
+                    <span className="material-symbols-outlined text-white/50">open_in_new</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (user?.id && user?.coupleId) {
+                        const { notificationService } = await import('../services/notificationService');
+                        const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+                        if (partnerId) {
+                          await notificationService.createNotification({
+                            user_id: partnerId,
+                            type: 'gesture',
+                            title: 'Eu te amo (SOS)',
+                            description: 'Mesmo no meio da discussão, seu parceiro quer que você saiba que ele ainda te ama.',
+                            icon: 'favorite',
+                            color: 'bg-red-500',
+                            link: '/sos'
+                          });
+                        }
+                      }
+                      showFeedback('success', 'Mensagem de amor enviada!');
+                    }}
+                    className="p-6 bg-white dark:bg-slate-900/40 rounded-3xl shadow-sm border border-primary/5 flex items-center gap-4 hover:border-primary/20 transition-all group"
+                  >
+                    <div className="size-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">favorite</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-black text-navy-main dark:text-slate-100 text-lg">Eu te amo (SOS)</h3>
+                      <p className="text-xs text-slate-500 font-medium">Lembre seu parceiro que o amor é maior que a discussão atual.</p>
                     </div>
                     <span className="material-symbols-outlined text-slate-300">chevron_right</span>
                   </button>

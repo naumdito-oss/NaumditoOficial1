@@ -50,6 +50,7 @@ export function Home() {
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [isCompletingGesture, setIsCompletingGesture] = useState(false);
   const [showDoneMessage, setShowDoneMessage] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   /**
    * Calculates the "Gesture of the Day" based on the current day of the year.
@@ -439,46 +440,58 @@ export function Home() {
         )}
 
         {/* Partner Connection Invite */}
-        {!partnerProfile && user?.coupleCode && (
+        {user?.coupleCode && (
           <div className="mt-6 p-6 md:p-8 rounded-[2rem] bg-gradient-to-br from-primary/10 to-peach-main/10 border border-primary/20 flex flex-col items-center text-center gap-4 relative overflow-hidden shadow-sm">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-peach-main/5 rounded-full blur-3xl -ml-10 -mb-10"></div>
             
             <div className="size-16 rounded-full bg-white dark:bg-slate-800 shadow-md flex items-center justify-center text-primary z-10 mb-2">
-              <span className="material-symbols-outlined text-3xl">favorite</span>
+              <span className="material-symbols-outlined text-3xl">{partnerProfile ? 'hub' : 'favorite'}</span>
             </div>
             
             <div className="z-10 max-w-md w-full">
-              <h3 className="text-xl md:text-2xl font-black text-navy-main dark:text-slate-100 mb-2">Convide seu amor</h3>
+              <h3 className="text-xl md:text-2xl font-black text-navy-main dark:text-slate-100 mb-2">
+                {partnerProfile ? 'Seu Código de Conexão' : 'Convide seu amor'}
+              </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-                Para aproveitar todas as funcionalidades do app, você precisa conectar sua conta com a do seu parceiro(a).
+                {partnerProfile 
+                  ? 'Este é o código que mantém vocês conectados. Você pode usá-lo para gerenciar sua conexão.'
+                  : 'Para aproveitar todas as funcionalidades do app, você precisa conectar sua conta com a do seu parceiro(a).'}
               </p>
               
               <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="bg-white dark:bg-slate-900 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner flex-1 max-w-[200px]">
+                <div className="bg-white dark:bg-slate-900 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner flex-1 max-w-[200px] relative">
                   <span className="text-2xl font-black tracking-[0.2em] text-primary">{user.coupleCode}</span>
+                  {copySuccess && (
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-3 py-1.5 rounded-full font-bold animate-in fade-in slide-in-from-bottom-2 z-20 shadow-lg">
+                      Copiado!
+                    </div>
+                  )}
                 </div>
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(user.coupleCode || '');
-                    alert('Código copiado!');
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
                   }}
-                  className="size-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-primary hover:border-primary/30 transition-colors shadow-sm"
+                  className={`size-14 rounded-2xl border transition-all shadow-sm flex items-center justify-center ${copySuccess ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary hover:border-primary/30'}`}
                   title="Copiar código"
                 >
-                  <span className="material-symbols-outlined">content_copy</span>
+                  <span className="material-symbols-outlined">{copySuccess ? 'check' : 'content_copy'}</span>
                 </button>
               </div>
               
-              <a 
-                href={`https://wa.me/?text=${encodeURIComponent(`Amor, baixe o app e use nosso código de conexão: ${user.coupleCode}\n\nLink: ${window.location.origin}/register?code=${user.coupleCode}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-[#25D366]/20"
-              >
-                <span className="material-symbols-outlined">chat</span>
-                Compartilhar no WhatsApp
-              </a>
+              {!partnerProfile && (
+                <a 
+                  href={`https://wa.me/?text=${encodeURIComponent(`Amor, baixe o app e use nosso código de conexão: ${user.coupleCode}\n\nLink: ${window.location.origin}/register?code=${user.coupleCode}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-[#25D366]/20"
+                >
+                  <span className="material-symbols-outlined">chat</span>
+                  Compartilhar no WhatsApp
+                </a>
+              )}
             </div>
           </div>
         )}

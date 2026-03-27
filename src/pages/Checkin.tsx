@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Contexts
@@ -14,6 +14,11 @@ import { CHECKIN_FEELINGS, CHECKIN_TAGS } from '../constants';
 export function Checkin() {
   const navigate = useNavigate();
   const { completeCheckin, checkinHistory } = useData();
+  
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   
   // Form state
   const [feeling, setFeeling] = useState<string | null>(null);

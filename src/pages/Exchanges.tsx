@@ -12,8 +12,6 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataProvider';
 
 // Constants
-import { EXCHANGE_TYPES } from '../constants';
-
 import { PageHeader } from '../components/layout/PageHeader';
 
 /**
@@ -35,8 +33,7 @@ export function Exchanges() {
   const [counterOfferText, setCounterOfferText] = useState('');
   
   const [formData, setFormData] = useState({
-    title: '',
-    type: EXCHANGE_TYPES[0] as typeof EXCHANGE_TYPES[number]
+    title: ''
   });
 
   /**
@@ -50,10 +47,10 @@ export function Exchanges() {
       addExchange({
         title: formData.title.trim(),
         description: '', // Not used in the new flow initially
-        type: formData.type,
+        type: 'ajuda', // Default type since UI is removed
         authorName: user?.name || 'Seu Par'
       });
-      setFormData({ title: '', type: 'romantico' });
+      setFormData({ title: '' });
       setIsModalOpen(false);
     }
   };
@@ -138,16 +135,6 @@ export function Exchanges() {
                 <span className="material-symbols-outlined">add_circle</span>
                 <span>Fazer um Pedido</span>
               </button>
-            </div>
-
-            <div className="bg-peach-main/5 dark:bg-peach-main/10 rounded-3xl p-6 border border-peach-main/10 flex flex-col gap-3">
-              <div className="flex items-center gap-2 text-peach-main">
-                <span className="material-symbols-outlined">lightbulb</span>
-                <span className="font-bold text-sm uppercase tracking-wider">Dica do Especialista</span>
-              </div>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                Permutas com o tom <span className="font-bold text-peach-main">Romântico</span> têm 40% mais chance de serem aceitas rapidamente pelo parceiro.
-              </p>
             </div>
           </div>
 
@@ -263,8 +250,7 @@ export function Exchanges() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-700">
-                      <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 px-3 py-1 rounded-full uppercase tracking-wider">{exchange.type}</span>
+                    <div className="flex items-center justify-end pt-4 border-t border-slate-50 dark:border-slate-700">
                       <span className="text-[10px] font-medium text-slate-400">Criado em {new Date(exchange.createdAt).toLocaleDateString()}</span>
                     </div>
                   </motion.div>
@@ -274,7 +260,7 @@ export function Exchanges() {
           </div>
         </div>
       </div>
-
+      
       {/* Modal for New Exchange */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Novo Pedido">
         <form onSubmit={handleAddExchange} className="space-y-6">
@@ -288,26 +274,6 @@ export function Exchanges() {
               className="w-full h-14 px-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-navy-main dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-peach-main outline-none transition-all"
               placeholder="Ex: Jogar bola na quarta-feira"
             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Categoria</label>
-            <div className="grid grid-cols-2 gap-3">
-              {EXCHANGE_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, type: type as any })}
-                  className={`h-12 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
-                    formData.type === type
-                      ? 'bg-peach-main border-peach-main text-slate-950 shadow-md'
-                      : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
           </div>
           
           <button 
