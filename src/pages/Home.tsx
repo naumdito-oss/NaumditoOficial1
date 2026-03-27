@@ -150,7 +150,7 @@ export function Home() {
         if (partnerId) {
           const { data } = await supabase
             .from('profiles')
-            .select('name, photo_url')
+            .select('id, name, photo_url')
             .eq('id', partnerId)
             .single();
           setPartnerProfile(data);
@@ -168,7 +168,49 @@ export function Home() {
     fetchGesture();
     fetchPartner();
     checkEvents();
-  }, [user]);
+
+    // Listen for partner registration
+    let partnerSubscription: any = null;
+    if (user?.coupleId && !partnerProfile) {
+      partnerSubscription = supabase
+        .channel('partner-registration')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'profiles',
+            filter: `couple_id=eq.${user.coupleId}`,
+          },
+          (payload) => {
+            if (payload.new.id !== user.id) {
+              fetchPartner();
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `couple_id=eq.${user.coupleId}`,
+          },
+          (payload) => {
+            if (payload.new.id !== user.id) {
+              fetchPartner();
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (partnerSubscription) {
+        supabase.removeChannel(partnerSubscription);
+      }
+    };
+  }, [user, partnerProfile?.id]);
 
   // Onboarding and User Profile Checks
   useEffect(() => {
@@ -542,7 +584,7 @@ export function Home() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate('/saia-da-rotina')}
+                onClick={() => navigate('/next-date')}
                 className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm relative group cursor-pointer"
               >
                 {nextDatePlan.photo ? (
@@ -586,7 +628,7 @@ export function Home() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate('/saia-da-rotina')}
+                onClick={() => navigate('/next-date')}
                 className="bg-white dark:bg-slate-900/40 p-8 rounded-[2.5rem] shadow-sm border border-dashed border-peach-main/30 flex flex-col items-center justify-center text-center gap-4 cursor-pointer hover:bg-peach-main/5 transition-all group"
               >
                 <div className="size-16 rounded-full bg-peach-main/10 flex items-center justify-center text-peach-main group-hover:scale-110 transition-transform">

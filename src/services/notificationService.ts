@@ -86,7 +86,7 @@ export const notificationService = {
         .select('id')
         .eq('couple_id', coupleId)
         .neq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data?.id || null;

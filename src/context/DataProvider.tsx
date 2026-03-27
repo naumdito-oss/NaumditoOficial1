@@ -126,8 +126,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setLevel(profile.level || 1);
         setWeeklyPoints(profile.weekly_points || 0);
         setDailyPoints(profile.daily_points || 0);
-        setCheckinCompleted(profile.checkin_completed || false);
-        setMicroGestureCompleted(profile.micro_gesture_completed || false);
+        const today = new Date().toISOString().split('T')[0];
+        const localCheckin = localStorage.getItem(`checkin_${user.id}_${today}`) === 'true';
+        setCheckinCompleted(profile.checkin_completed || localCheckin);
+        
+        const localCompleted = localStorage.getItem(`micro_gesture_${user.id}_${today}`) === 'true';
+        setMicroGestureCompleted(profile.micro_gesture_completed || localCompleted);
       }
 
       // Load agreements
@@ -1000,14 +1004,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     // Update local state immediately for better UX
     setCheckinCompleted(true);
 
-    const { error: profileError } = await supabase.from('profiles').update({
+    let profileError;
+    const updateRes = await supabase.from('profiles').update({
       checkin_completed: true
     }).eq('id', user.id);
+    profileError = updateRes.error;
 
     if (profileError) {
       console.error('Error updating profile checkin status:', profileError);
-      setCheckinCompleted(false); // Revert if failed
-      return false;
+      // Fallback to localStorage if column doesn't exist
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(`checkin_${user.id}_${today}`, 'true');
     }
 
     // Manually refresh data to ensure UI updates
@@ -1054,13 +1061,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Fetch current profile to get latest points and avoid race conditions
-      const { data: profile, error: fetchError } = await supabase
+      // Try fetching with all columns first
+      let profile;
+      let fetchError;
+      
+      const res = await supabase
         .from('profiles')
         .select('points, daily_points, weekly_points')
         .eq('id', user.id)
         .single();
-      
-      if (fetchError) throw fetchError;
+        
+      profile = res.data;
+      fetchError = res.error;
+
+      // If it fails, maybe the columns don't exist. Fallback to just points.
+      if (fetchError) {
+        console.warn('Failed to fetch daily/weekly points, falling back to just points:', fetchError);
+        const fallbackRes = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('id', user.id)
+          .single();
+          
+        if (fallbackRes.error) throw fallbackRes.error;
+        profile = fallbackRes.data;
+      }
 
       const currentPoints = profile?.points || 0;
       const currentDailyPoints = profile?.daily_points || 0;
@@ -1074,15 +1099,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Updating micro-gesture status and points:', { pointsToAdd, newPoints });
 
-      // Single update for all profile fields
-      const { error } = await supabase.from('profiles').update({
+      // Try updating all fields
+      let updateError;
+      const updateRes = await supabase.from('profiles').update({
         micro_gesture_completed: true,
         points: newPoints,
         daily_points: newDailyPoints,
         weekly_points: newWeeklyPoints
       }).eq('id', user.id);
+      
+      updateError = updateRes.error;
 
-      if (error) throw error;
+      // If update fails, fallback to just points and micro_gesture_completed
+      if (updateError) {
+        console.warn('Failed to update all fields, falling back to basic fields:', updateError);
+        const fallbackUpdateRes = await supabase.from('profiles').update({
+          points: newPoints
+        }).eq('id', user.id);
+        
+        if (fallbackUpdateRes.error) {
+          console.error('Failed to update points:', fallbackUpdateRes.error);
+        } else {
+          // If we can't update micro_gesture_completed in DB, store in localStorage
+          const today = new Date().toISOString().split('T')[0];
+          localStorage.setItem(`micro_gesture_${user.id}_${today}`, 'true');
+        }
+      }
 
       // Update local points state
       setPoints(newPoints);
