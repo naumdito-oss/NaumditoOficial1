@@ -40,7 +40,8 @@ export function Home() {
     getCoupleStatus,
     pointsModal,
     setPointsModal,
-    nextDatePlan
+    nextDatePlan,
+    empathyMessages
   } = useData();
 
   const [dbGesture, setDbGesture] = useState<any>(null);
@@ -169,8 +170,28 @@ export function Home() {
     fetchPartner();
     checkEvents();
 
-    // Listen for partner registration
+    // Listen for partner registration and notifications
     let partnerSubscription: any = null;
+    let notificationSubscription: any = null;
+
+    if (user?.id) {
+      notificationSubscription = supabase
+        .channel('user-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchUnreadCount();
+          }
+        )
+        .subscribe();
+    }
+
     if (user?.coupleId && !partnerProfile) {
       partnerSubscription = supabase
         .channel('partner-registration')
@@ -208,6 +229,9 @@ export function Home() {
     return () => {
       if (partnerSubscription) {
         supabase.removeChannel(partnerSubscription);
+      }
+      if (notificationSubscription) {
+        supabase.removeChannel(notificationSubscription);
       }
     };
   }, [user, partnerProfile?.id]);
@@ -295,6 +319,12 @@ export function Home() {
   }, [weeklyHistory, connectionPercentage]);
 
   const fallbackImageUrl = 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop';
+
+  const partnerMessages = useMemo(() => {
+    return empathyMessages
+      .filter(m => m.authorId && m.authorId !== user?.id)
+      .slice(0, 3);
+  }, [empathyMessages, user?.id]);
 
   /**
    * Handles the completion of the micro-gesture with loading state.
@@ -513,6 +543,53 @@ export function Home() {
                 </div>
               )}
             </div>
+
+            {/* Partner Messages */}
+            {partnerMessages.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-navy-main dark:text-slate-100 text-lg font-bold">Mensagens e Desculpas do seu Par</h3>
+                  <button onClick={() => navigate('/empathy-box')} className="text-primary text-sm font-semibold hover:underline">
+                    Ver todas
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {partnerMessages.map((msg) => (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-5 rounded-3xl border shadow-sm relative overflow-hidden ${
+                        msg.vibe === 'sos' ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800' :
+                        msg.vibe === 'sincero' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800' :
+                        msg.vibe === 'engracado' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800' :
+                        'bg-pink-50 dark:bg-pink-900/20 border-pink-100 dark:border-pink-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`material-symbols-outlined text-lg ${
+                          msg.vibe === 'sos' ? 'text-red-500' :
+                          msg.vibe === 'sincero' ? 'text-blue-500' :
+                          msg.vibe === 'engracado' ? 'text-amber-500' :
+                          'text-pink-500'
+                        }`}>
+                          {msg.vibe === 'sos' ? 'emergency_home' : msg.vibe === 'sincero' ? 'volunteer_activism' : msg.vibe === 'engracado' ? 'sentiment_very_satisfied' : 'favorite'}
+                        </span>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${
+                          msg.vibe === 'sos' ? 'text-red-600 dark:text-red-400' :
+                          msg.vibe === 'sincero' ? 'text-blue-600 dark:text-blue-400' :
+                          msg.vibe === 'engracado' ? 'text-amber-600 dark:text-amber-400' :
+                          'text-pink-600 dark:text-pink-400'
+                        }`}>
+                          {msg.vibe === 'sos' ? 'Alerta SOS' : msg.vibe === 'sincero' ? 'Sincero' : msg.vibe === 'engracado' ? 'Engraçado' : 'Fofo'}
+                        </span>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed relative z-10 italic">"{msg.text}"</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Micro-gesture */}
             <div className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm group">

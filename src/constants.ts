@@ -15,7 +15,8 @@ export const STORAGE_KEYS = {
 export const EMPATHY_VIBES = [
   { id: 'fofo', label: 'Fofo', icon: 'favorite', color: 'text-pink-500 bg-pink-100 dark:bg-pink-900/30' },
   { id: 'sincero', label: 'Sincero', icon: 'volunteer_activism', color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30' },
-  { id: 'engracado', label: 'Engraçado', icon: 'sentiment_very_satisfied', color: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' }
+  { id: 'engracado', label: 'Engraçado', icon: 'sentiment_very_satisfied', color: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' },
+  { id: 'sos', label: 'Alerta SOS', icon: 'emergency_home', color: 'text-red-500 bg-red-100 dark:bg-red-900/30' }
 ];
 
 /**

@@ -167,7 +167,7 @@ export function EmpathyBox() {
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Qual a vibe?</label>
             <div className="grid grid-cols-3 gap-2">
-              {EMPATHY_VIBES.map(vibe => (
+              {EMPATHY_VIBES.filter(v => v.id !== 'sos').map(vibe => (
                 <button
                   key={vibe.id}
                   type="button"

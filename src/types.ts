@@ -78,9 +78,10 @@ export interface WeeklyProgress {
 export interface EmpathyMessage {
   id: string;
   text: string;
-  vibe: 'fofo' | 'sincero' | 'engracado';
+  vibe: 'fofo' | 'sincero' | 'engracado' | 'sos';
   createdAt: string;
   authorName?: string;
+  authorId?: string;
 }
 
 /**

@@ -204,7 +204,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         id: m.id,
         text: m.text,
         vibe: m.vibe,
-        createdAt: m.created_at
+        createdAt: m.created_at,
+        authorId: m.author_id
       })));
 
       // Load next date plans (all of them)
@@ -837,6 +838,39 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Error adding empathy message:', error);
       return;
+    }
+
+    // Notify partner
+    const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+    if (partnerId) {
+      let title = 'Nova Mensagem';
+      let description = 'Seu par deixou uma nova mensagem para você.';
+      let icon = 'mail';
+      let color = 'bg-primary';
+      let link = '/empathy-box';
+
+      if (message.vibe === 'sos') {
+        title = 'Alerta SOS';
+        description = 'Seu par postou um desabafo no mural.';
+        icon = 'emergency_home';
+        color = 'bg-red-500';
+        link = '/sos';
+      } else if (message.vibe === 'sincero') {
+        title = 'Pedido de Desculpas';
+        description = 'Seu par deixou um pedido de desculpas.';
+        icon = 'favorite';
+        color = 'bg-pink-500';
+      }
+
+      await notificationService.createNotification({
+        user_id: partnerId,
+        type: 'message',
+        title,
+        description,
+        icon,
+        color,
+        link
+      });
     }
 
     // Manually refresh data to ensure UI updates

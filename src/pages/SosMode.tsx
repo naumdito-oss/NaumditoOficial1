@@ -7,6 +7,10 @@ import { GoogleGenAI } from "@google/genai";
 import { BottomNav } from '../components/layout/BottomNav';
 import { Modal } from '../components/common/Modal';
 
+// Contexts
+import { useData } from '../context/DataProvider';
+import { useAuth } from '../context/AuthContext';
+
 /**
  * SosMode page component.
  * Provides tools for conflict resolution, including AI-assisted mediation
@@ -14,6 +18,9 @@ import { Modal } from '../components/common/Modal';
  */
 export function SosMode() {
   const navigate = useNavigate();
+  const { addEmpathyMessage } = useData();
+  const { user } = useAuth();
+  
   const [activeTab, setActiveTab] = useState<'mediation' | 'emergency'>('mediation');
   
   // Mediation State
@@ -95,7 +102,15 @@ export function SosMode() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const handlePostMural = () => {
+  const handlePostMural = async () => {
+    if (!text.trim()) return;
+
+    await addEmpathyMessage({
+      text: text.trim(),
+      vibe: 'sos',
+      authorName: user?.name || 'Seu Par'
+    });
+
     window.dispatchEvent(new CustomEvent('new_notification', { 
       detail: { title: 'Desabafo Postado', message: 'Seu desabafo foi postado no mural com sucesso.' }
     }));
@@ -105,9 +120,26 @@ export function SosMode() {
     }, 1500);
   };
 
-  const handleTimeOut = () => {
+  const handleTimeOut = async () => {
+    if (user?.id && user?.coupleId) {
+      const { notificationService } = await import('../services/notificationService');
+      const partnerId = await notificationService.getPartnerId(user.id, user.coupleId);
+      
+      if (partnerId) {
+        await notificationService.createNotification({
+          user_id: partnerId,
+          type: 'alert',
+          title: 'Pedido de Tempo',
+          description: 'Seu parceiro pediu um tempo para se acalmar. Respeite este momento.',
+          icon: 'timer',
+          color: 'bg-amber-500',
+          link: '/sos'
+        });
+      }
+    }
+
     window.dispatchEvent(new CustomEvent('new_notification', { 
-      detail: { title: 'Pedido de Tempo', message: 'Seu parceiro pediu um tempo para se acalmar. Respeite este momento.' }
+      detail: { title: 'Pedido de Tempo', message: 'Notificação de "Tempo" enviada ao seu parceiro.' }
     }));
     setShowTimeOutModal(false);
     showFeedback('success', 'Notificação de "Tempo" enviada ao seu parceiro.');
