@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Settings Page Component
@@ -14,13 +15,23 @@ import { useTheme } from '../hooks/useTheme';
 export function Settings() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   
   // Preferences State
   const [notifications, setNotifications] = useState(true);
   const [sound, setSound] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const darkMode = theme === 'dark';
   const toggleDarkMode = toggleTheme;
+
+  const handleCopyCode = () => {
+    if (user?.coupleCode) {
+      navigator.clipboard.writeText(user.coupleCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-24 transition-colors duration-300">
@@ -165,6 +176,34 @@ export function Settings() {
             <h3 className="text-lg font-black text-navy-main dark:text-slate-100 tracking-tight mb-6">Conta</h3>
             
             <div className="space-y-4">
+              {/* Couple Code */}
+              {user?.coupleCode && (
+                <div className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined">vpn_key</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-navy-main dark:text-slate-200 text-sm">Código de Conexão</p>
+                      <p className="font-mono text-xs text-slate-500 font-bold bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-md inline-block mt-1">
+                        {user.coupleCode}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleCopyCode}
+                    className="flex items-center gap-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm text-slate-500 dark:text-slate-300">
+                      {copied ? 'check' : 'content_copy'}
+                    </span>
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                      {copied ? 'Copiado!' : 'Copiar'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               <button 
                 onClick={() => navigate('/login')}
                 className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group"

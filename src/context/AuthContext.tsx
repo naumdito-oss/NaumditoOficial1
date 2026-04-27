@@ -424,7 +424,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .upsert({ 
           id: authData.user.id, 
           name, 
-          email 
+          email,
+          ...(coupleId ? { couple_id: coupleId } : {})
         })
         .select('couple_id')
         .single();

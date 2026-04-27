@@ -161,15 +161,17 @@ export function Home() {
     };
 
     const checkEvents = async () => {
-      if (user?.id && user?.coupleId) {
+      if (!loading && user?.id && user?.coupleId) {
         await notificationService.checkAndGenerateEventNotifications(user.id, user.coupleId);
         fetchUnreadCount();
       }
     };
     
-    fetchGesture();
-    fetchPartner();
-    checkEvents();
+    if (!loading) {
+      fetchGesture();
+      fetchPartner();
+      checkEvents();
+    }
 
     // Listen for partner registration and notifications
     let partnerSubscription: any = null;
@@ -522,23 +524,21 @@ export function Home() {
         )}
 
         {/* Partner Connection Invite */}
-        {user?.coupleCode && (
+        {user?.coupleCode && !partnerProfile && localStorage.getItem('invite_shared') !== 'true' && (
           <div className="mt-6 p-6 md:p-8 rounded-[2rem] bg-gradient-to-br from-primary/10 to-peach-main/10 border border-primary/20 flex flex-col items-center text-center gap-4 relative overflow-hidden shadow-sm">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-peach-main/5 rounded-full blur-3xl -ml-10 -mb-10"></div>
             
             <div className="size-16 rounded-full bg-white dark:bg-slate-800 shadow-md flex items-center justify-center text-primary z-10 mb-2">
-              <span className="material-symbols-outlined text-3xl">{partnerProfile ? 'hub' : 'favorite'}</span>
+              <span className="material-symbols-outlined text-3xl">favorite</span>
             </div>
             
             <div className="z-10 max-w-md w-full">
               <h3 className="text-xl md:text-2xl font-black text-navy-main dark:text-slate-100 mb-2">
-                {partnerProfile ? 'Seu Código de Conexão' : 'Convide seu amor'}
+                Convide seu amor
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-                {partnerProfile 
-                  ? 'Este é o código que mantém vocês conectados. Você pode usá-lo para gerenciar sua conexão.'
-                  : 'Para aproveitar todas as funcionalidades do app, você precisa conectar sua conta com a do seu parceiro(a).'}
+                Para aproveitar todas as funcionalidades do app, você precisa conectar sua conta com a do seu parceiro(a).
               </p>
               
               <div className="flex items-center justify-center gap-3 mb-6">
@@ -563,82 +563,99 @@ export function Home() {
                 </button>
               </div>
               
-              {!partnerProfile && (
-                <a 
-                  href={`https://wa.me/?text=${encodeURIComponent(`Amor, baixe o app e use nosso código de conexão: ${user.coupleCode}\n\nLink: ${window.location.origin}/register?code=${user.coupleCode}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-[#25D366]/20"
-                >
-                  <span className="material-symbols-outlined">chat</span>
-                  Compartilhar no WhatsApp
-                </a>
-              )}
+              <a 
+                href={`https://wa.me/?text=${encodeURIComponent(`Amor, baixe o app e use nosso código de conexão: ${user.coupleCode}\n\nLink: ${window.location.origin}/register?code=${user.coupleCode}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  localStorage.setItem('invite_shared', 'true');
+                  // Trigger a re-render
+                  window.dispatchEvent(new Event('storage'));
+                }}
+                className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-[#25D366]/20"
+              >
+                <span className="material-symbols-outlined">chat</span>
+                Compartilhar no WhatsApp
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Daily Check-in Card */}
+        {!checkinCompleted && (
+          <div className={`mt-6 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-2xl transition-all relative overflow-hidden bg-gradient-to-br from-primary to-primary-light`}>
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <span className="material-symbols-outlined text-[120px]">assessment</span>
+            </div>
+            
+            <div className="relative z-10 flex-1 text-center md:text-left mb-6 md:mb-0">
+              <h4 className="font-black text-2xl md:text-3xl mb-2 text-white tracking-tighter">
+                Check-in Diário
+              </h4>
+              <p className="text-white/90 text-sm md:text-base max-w-xs">
+                Ainda não avaliaram o dia. Vamos conversar?
+              </p>
+            </div>
+            
+            <Link 
+              to="/checkin" 
+              className={`relative z-10 px-8 py-4 rounded-2xl font-bold text-base shadow-xl transition-all flex items-center gap-2 bg-white text-primary hover:scale-105 active:scale-95`}
+            >
+              Começar Agora
+            </Link>
+          </div>
+        )}
+
+        {/* Micro-gesture */}
+        {!microGestureCompleted && (
+          <div className="mt-6 bg-white dark:bg-slate-900/40 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm group">
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              <div className="h-48 md:h-full overflow-hidden">
+                <img 
+                  src={gestureOfTheDay.imageUrl || fallbackImageUrl} 
+                  alt={gestureOfTheDay.title} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="p-6 md:p-8 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-bold text-peach-main bg-peach-main/10 px-2 py-1 rounded-full uppercase tracking-widest">Gesto do Dia</span>
+                </div>
+                <h3 className="text-navy-main dark:text-slate-100 text-xl md:text-2xl font-black leading-tight mb-3">{gestureOfTheDay.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base leading-relaxed mb-6">{gestureOfTheDay.description}</p>
+                <div className="relative inline-block w-full md:w-fit">
+                  <button 
+                    onClick={handleCompleteGesture}
+                    disabled={isCompletingGesture}
+                    className={`w-full md:w-fit flex items-center justify-center gap-2 rounded-2xl h-14 px-8 text-white font-bold shadow-xl transition-all ${
+                      isCompletingGesture 
+                        ? 'bg-emerald-500 shadow-emerald-500/20 cursor-default' 
+                        : 'bg-navy-main hover:bg-navy-main/90 active:scale-95 shadow-navy-main/20'
+                    }`}
+                  >
+                    {isCompletingGesture ? (
+                      <>
+                        <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        Marcar como Feito
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mt-4">
           
-          {/* Left Column: Connection Status & Micro-gesture */}
+          {/* Left Column */}
           <div className="lg:col-span-7 space-y-6 md:space-y-8">
             
-            {/* Connection Barometer */}
-            <div className="bg-white dark:bg-slate-900/40 p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-primary/5">
-              <div className="flex gap-6 justify-between items-end mb-4">
-                <div className="relative group">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-emerald-main">Termômetro de Sintonia</p>
-                    <button 
-                      onClick={() => setIsConnectionModalOpen(true)}
-                      className="material-symbols-outlined text-slate-400 text-sm hover:text-primary transition-colors"
-                    >
-                      info
-                    </button>
-                  </div>
-                  <p className={`text-2xl md:text-4xl font-black leading-tight tracking-tighter ${statusColor}`}>{statusLabel}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl md:text-5xl font-black leading-none text-primary">{connectionPercentage}%</p>
-                </div>
-              </div>
-              <div className="h-4 rounded-full bg-primary/10 overflow-hidden mb-4">
-                <div className="h-full rounded-full bg-gradient-to-r from-primary to-peach-main shadow-[0_0_10px_rgba(123,143,214,0.5)] transition-all duration-1000" style={{ width: `${connectionPercentage}%` }}></div>
-              </div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed mb-8">
-                {isInitialState 
-                  ? "Comece a interagir para ver sua sintonia evoluir ao longo da semana!" 
-                  : `${user?.name || 'Olá'}! Sua sintonia está ${connectionPercentage >= 60 ? 'excelente' : 'em evolução'} esta semana.`}
-              </p>
-
-              {/* Evolution Chart - Only show if there is history */}
-              {!isInitialState && weeklyHistory.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-primary/5">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Evolução Semanal</h4>
-                  <div className="h-40 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorPct" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} domain={[0, 100]} />
-                        <Tooltip 
-                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
-                          itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
-                          formatter={(value: number) => [`${value}%`, 'Sintonia']}
-                        />
-                        <Area type="monotone" dataKey="pct" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorPct)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Partner Messages */}
             {partnerMessages.length > 0 && (
               <div className="space-y-4">
@@ -713,6 +730,30 @@ export function Home() {
               </div>
             </div>
 
+            {/* Special Dates Section */}
+            {userProfile?.specialDates && userProfile.specialDates.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-navy-main dark:text-slate-100 text-lg font-bold">Datas Especiais</h3>
+                  <span className="material-symbols-outlined text-peach-main">event_note</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {userProfile.specialDates.map((dateObj: any, index: number) => (
+                    <div 
+                      key={index}
+                      className="p-5 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm"
+                    >
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{dateObj.label}</p>
+                      <p className="font-bold text-navy-main dark:text-slate-100 text-sm">
+                        {dateObj.date ? new Date(dateObj.date + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Custom Fields Section */}
             {userProfile?.customFields && userProfile.customFields.length > 0 && (
               <div className="space-y-4">
@@ -735,72 +776,7 @@ export function Home() {
               </div>
             )}
 
-            {/* Micro-gesture */}
-            <div className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm group">
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                <div className="h-48 md:h-full overflow-hidden">
-                  <img 
-                    src={gestureOfTheDay.imageUrl || fallbackImageUrl} 
-                    alt={gestureOfTheDay.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                <div className="p-6 md:p-8 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-bold text-peach-main bg-peach-main/10 px-2 py-1 rounded-full uppercase tracking-widest">Gesto do Dia</span>
-                  </div>
-                  <h3 className="text-navy-main dark:text-slate-100 text-xl md:text-2xl font-black leading-tight mb-3">{gestureOfTheDay.title}</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base leading-relaxed mb-6">{gestureOfTheDay.description}</p>
-                  <div className="relative inline-block w-full md:w-fit">
-                    <AnimatePresence>
-                      {showDoneMessage && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute -top-12 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-50 whitespace-nowrap"
-                        >
-                          Gesto já concluído hoje!
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <button 
-                      onClick={handleCompleteGesture}
-                      disabled={isCompletingGesture || microGestureCompleted}
-                      className={`w-full md:w-fit flex items-center justify-center gap-2 rounded-2xl h-14 px-8 text-white font-bold shadow-xl transition-all ${
-                        (microGestureCompleted || isCompletingGesture) 
-                          ? 'bg-emerald-500 shadow-emerald-500/20 cursor-default' 
-                          : 'bg-navy-main hover:bg-navy-main/90 active:scale-95 shadow-navy-main/20'
-                      }`}
-                    >
-                      {isCompletingGesture ? (
-                        <>
-                          <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                          Processando...
-                        </>
-                      ) : microGestureCompleted ? (
-                        <>
-                          <span className="material-symbols-outlined text-xl">check_circle</span>
-                          Gesto Concluído!
-                        </>
-                      ) : (
-                        <>
-                          Marcar como Feito
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Tools & Check-in */}
-          <div className="lg:col-span-5 space-y-6 md:space-y-8">
-            
-            {/* Next Date Plan (Sair da Rotina) */}
+            {/* Custom Fields Section */}
             {nextDatePlan ? (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -886,48 +862,9 @@ export function Home() {
               </div>
             </div>
 
-            {/* Daily Check-in Card */}
-            <div className={`rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-2xl transition-all relative overflow-hidden ${
-              checkinCompleted 
-                ? 'bg-peach-500' 
-                : 'bg-gradient-to-br from-primary to-primary-light'
-            }`}>
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <span className="material-symbols-outlined text-[120px]">assessment</span>
-              </div>
-              
-              <div className="relative z-10 flex-1 text-center md:text-left mb-6 md:mb-0">
-                <h4 className="font-black text-2xl md:text-3xl mb-2 text-white tracking-tighter">
-                  {checkinCompleted ? 'Check-in Realizado!' : 'Check-in Diário'}
-                </h4>
-                <p className="text-white/90 text-sm md:text-base max-w-xs">
-                  {checkinCompleted 
-                    ? 'Parabéns por manter a conexão em dia!' 
-                    : 'Ainda não avaliaram o dia. Vamos conversar?'}
-                </p>
-              </div>
-              
-              <Link 
-                to="/checkin" 
-                className={`relative z-10 px-8 py-4 rounded-2xl font-bold text-base shadow-xl transition-all flex items-center gap-2 ${
-                  checkinCompleted 
-                    ? 'bg-white/20 text-white cursor-default' 
-                    : 'bg-white text-primary hover:scale-105 active:scale-95'
-                }`}
-                onClick={(e) => checkinCompleted && e.preventDefault()}
-              >
-                {checkinCompleted ? 'Ver Resumo' : 'Começar Agora'}
-              </Link>
-            </div>
           </div>
         </div>
       </div>
-
-      <ConnectionModal 
-        isOpen={isConnectionModalOpen} 
-        onClose={() => setIsConnectionModalOpen(false)} 
-        percentage={connectionPercentage} 
-      />
 
       <PointsModal
         isOpen={pointsModal.isOpen}

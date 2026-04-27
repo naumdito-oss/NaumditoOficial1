@@ -213,11 +213,12 @@ export function SaiaDaRotina() {
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-navy-main/90 via-navy-main/20 to-transparent"></div>
                       <div className="absolute bottom-6 left-6 right-6">
-                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 ${PROGRAM_ICONS[plan.programType].color} bg-white/10 backdrop-blur-md`}>
-                          <span className="material-symbols-outlined">{PROGRAM_ICONS[plan.programType].icon}</span>
-                          <span className="text-xs font-black uppercase tracking-widest">{PROGRAM_ICONS[plan.programType].label}</span>
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 ${(PROGRAM_ICONS[plan.programType] || PROGRAM_ICONS['pipoca']).color} bg-white/10 backdrop-blur-md`}>
+                          <span className="material-symbols-outlined">{(PROGRAM_ICONS[plan.programType] || PROGRAM_ICONS['pipoca']).icon}</span>
+                          <span className="text-xs font-black uppercase tracking-widest">{(PROGRAM_ICONS[plan.programType] || PROGRAM_ICONS['pipoca']).label}</span>
                         </div>
                         <h3 className="text-white font-black text-2xl leading-tight mb-2">{plan.title || 'Plano Surpresa'}</h3>
+
                         <div className="flex items-center gap-4">
                           <p className="text-white/80 text-xs font-bold flex items-center gap-1">
                             <span className="material-symbols-outlined text-sm">location_on</span>

@@ -115,7 +115,7 @@ export function Agreements() {
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden transition-colors duration-300">
       <div className="w-full max-w-4xl mx-auto flex flex-col flex-1 pb-24">
         <PageHeader 
-          title="Acordos - Nossos combinados" 
+          title="Nossos Combinados" 
           rightAction={
             <div className="relative" ref={menuRef}>
               <button 
@@ -141,7 +141,7 @@ export function Agreements() {
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
                     >
                       <span className="material-symbols-outlined text-lg text-peach-500">lightbulb</span>
-                      Dicas de Acordos
+                      Dicas de Combinados
                     </button>
                     <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2 my-1" />
                     <button 
@@ -167,7 +167,7 @@ export function Agreements() {
               {/* Active Agreements Section */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-slate-900 dark:text-slate-100 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Ativos</h3>
+                  <h3 className="text-slate-900 dark:text-slate-100 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Combinados Ativos</h3>
                   <button 
                     onClick={() => setIsModalOpen(true)}
                     className="flex items-center justify-center gap-2 bg-navy-main text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-navy-main/20 active:scale-95 transition-all hover:bg-navy-main/90"
@@ -187,7 +187,7 @@ export function Agreements() {
                         exit={{ opacity: 0 }}
                         className="text-center bg-white dark:bg-slate-900/20 rounded-3xl p-8 border border-dashed border-slate-200 dark:border-slate-800"
                       >
-                        <p className="text-slate-500 text-sm">Nenhum acordo ativo no momento.</p>
+                        <p className="text-slate-500 text-sm">Nenhum combinado ativo no momento.</p>
                       </motion.div>
                     ) : (
                       agreements.filter(a => a.status === 'active').map((agreement) => (
@@ -234,7 +234,7 @@ export function Agreements() {
               {/* Broken Agreements Section */}
               {agreements.some(a => a.status === 'broken') && (
                 <div className="space-y-4">
-                  <h3 className="text-red-500 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Acordos Descumpridos</h3>
+                  <h3 className="text-red-500 text-sm font-bold uppercase tracking-[0.1em] opacity-70">Combinados Descumpridos</h3>
                   <div className="flex flex-col gap-3">
                     <AnimatePresence mode="popLayout">
                     {agreements.filter(a => a.status === 'broken').map((agreement) => (
@@ -308,7 +308,7 @@ export function Agreements() {
       <Modal isOpen={isJustificationModalOpen} onClose={() => setIsJustificationModalOpen(false)} title="Justificativa">
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Por que o acordo foi descumprido?</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Por que o combinado foi descumprido?</label>
             <textarea
               autoFocus
               value={justification}
@@ -333,8 +333,8 @@ export function Agreements() {
         isOpen={isConfirmDeleteOpen}
         onClose={() => setIsConfirmDeleteOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Remover Acordo"
-        message="Tem certeza que deseja remover este acordo? Esta ação não pode ser desfeita."
+        title="Remover Combinado"
+        message="Tem certeza que deseja remover este combinado? Esta ação não pode ser desfeita."
         confirmText="Remover"
         type="danger"
       />
@@ -345,21 +345,21 @@ export function Agreements() {
         onClose={() => setIsConfirmClearOpen(false)}
         onConfirm={handleConfirmClear}
         title="Limpar Histórico"
-        message="Deseja remover todos os acordos descumpridos do seu histórico? Esta ação não pode ser desfeita."
+        message="Deseja remover todos os combinados descumpridos do seu histórico? Esta ação não pode ser desfeita."
         confirmText="Limpar Tudo"
         type="danger"
       />
 
       {/* Tips Modal */}
-      <Modal isOpen={isTipsModalOpen} onClose={() => setIsTipsModalOpen(false)} title="Dicas de Acordos">
+      <Modal isOpen={isTipsModalOpen} onClose={() => setIsTipsModalOpen(false)} title="Dicas de Combinados">
         <div className="space-y-6">
           <div className="p-4 bg-peach-50 dark:bg-peach-900/10 rounded-2xl border border-peach-100 dark:border-peach-900/20">
             <h4 className="font-bold text-peach-700 dark:text-peach-400 mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">info</span>
-              Por que fazer acordos?
+              Por que fazer combinados?
             </h4>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              Acordos ajudam a alinhar expectativas e evitar conflitos desnecessários. Eles devem ser revistos periodicamente.
+              Combinados ajudam a alinhar expectativas e evitar conflitos desnecessários. Eles devem ser revistos periodicamente.
             </p>
           </div>
 
@@ -390,7 +390,7 @@ export function Agreements() {
               </div>
               <div>
                 <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Revisão Semanal</p>
-                <p className="text-xs text-slate-500">Use o check-in semanal para conversar sobre como os acordos estão funcionando.</p>
+                <p className="text-xs text-slate-500">Use o check-in semanal para conversar sobre como os combinados estão funcionando.</p>
               </div>
             </div>
           </div>

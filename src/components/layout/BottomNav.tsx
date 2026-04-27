@@ -22,13 +22,29 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-5xl mx-auto border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 pb-6 pt-2 z-50">
-      <div className="flex gap-2 justify-around items-center">
-        <NavItem to="/home" icon="home" label="Início" />
-        <NavItem to="/agreements" icon="handshake" label="Acordos" />
-        <NavItem to="/sos" icon="shield_with_heart" label="SOS" />
-        <NavItem to="/points" icon="stars" label="Sintonia" />
-        <NavItem to="/profile" icon="person" label="Perfil" />
+    <nav className="fixed bottom-0 left-0 right-0 max-w-5xl mx-auto border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2 pb-6 pt-2 z-50">
+      <div className="flex gap-2 overflow-x-auto items-center no-scrollbar pb-2 px-2 snap-x">
+        <div className="snap-center shrink-0">
+          <NavItem to="/home" icon="home" label="Início" />
+        </div>
+        <div className="snap-center shrink-0">
+          <NavItem to="/points" icon="stars" label="Sintonia" />
+        </div>
+        <div className="snap-center shrink-0">
+          <NavItem to="/next-date" icon="event_available" label="Rotina" />
+        </div>
+        <div className="snap-center shrink-0">
+          <NavItem to="/sos" icon="emergency_home" label="SOS" />
+        </div>
+        <div className="snap-center shrink-0">
+          <NavItem to="/surprise" icon="redeem" label="Surpresa" />
+        </div>
+        <div className="snap-center shrink-0">
+          <NavItem to="/empathy-box" icon="mail" label="Desculpas" />
+        </div>
+        <div className="snap-center shrink-0">
+          <NavItem to="/profile" icon="person" label="Perfil" />
+        </div>
       </div>
     </nav>
   );
@@ -61,7 +77,7 @@ function NavItem({ to, icon, label }: NavItemProps) {
       to={to}
       className={({ isActive }) =>
         cn(
-          "flex flex-1 flex-col items-center justify-center gap-1 transition-colors",
+          "flex flex-col items-center justify-center gap-1 transition-colors w-16 px-1",
           isActive ? "text-primary" : "text-slate-400 dark:text-slate-500 hover:text-primary"
         )
       }
@@ -72,8 +88,8 @@ function NavItem({ to, icon, label }: NavItemProps) {
             <span className={cn("material-symbols-outlined text-[24px]", isActive && "filled")}>
               {icon}
             </span>
-            {/* Notification dot for 'Acordos' when active (example logic) */}
-            {isActive && label === 'Acordos' && (
+            {/* Notification dot for active item (example logic) */}
+            {isActive && label === 'Saia da Rotina' && (
               <span className="absolute -top-1 -right-1 size-2 bg-peach-main rounded-full"></span>
             )}
           </div>

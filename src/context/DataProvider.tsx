@@ -1041,20 +1041,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addNextDatePlan = async (plan: Omit<NextDatePlan, 'id' | 'updatedAt'>) => {
     if (!user?.id || !user?.coupleId) return;
 
-    const { data, error } = await supabase.from('next_date_plans').insert({
-      couple_id: user.coupleId,
-      author_id: user.id,
-      title: plan.title,
-      description: plan.description,
-      location: plan.location,
-      photo: plan.photo,
-      date: plan.date,
-      program_type: plan.programType,
-      updated_at: new Date().toISOString()
-    }).select().single();
+    try {
+      const { data, error } = await supabase.from('next_date_plans').insert({
+        couple_id: user.coupleId,
+        author_id: user.id,
+        title: plan.title || 'Plano',
+        description: plan.description || '',
+        location: plan.location || '',
+        photo: plan.photo || '',
+        date: plan.date || new Date().toISOString().split('T')[0],
+        program_type: plan.programType || 'pipoca',
+        updated_at: new Date().toISOString()
+      }).select().single();
 
-    if (error) {
-      console.error('Error adding date plan:', error);
+      if (error) {
+        console.error('Error adding date plan (supabase error):', error);
+        alert('Erro ao salvar o plano. ' + error.message);
+        return;
+      }
+    } catch (e) {
+      console.error('Exception adding date plan:', e);
+      alert('Erro ao salvar o plano.');
       return;
     }
 
@@ -1150,42 +1157,67 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addPoints = async (amount: number) => {
     if (!user?.id) return;
 
-    // Fetch latest points from DB to avoid race conditions
-    const { data: profile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('points, daily_points, weekly_points')
-      .eq('id', user.id)
-      .single();
+    try {
+      // Fetch latest points from DB to avoid race conditions
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('points, daily_points, weekly_points')
+        .eq('id', user.id)
+        .single();
 
-    if (fetchError || !profile) {
-      console.error('Error fetching latest points:', fetchError);
-      return;
-    }
+      let currentPoints = 0;
+      let currentDailyPoints = 0;
+      let currentWeeklyPoints = 0;
 
-    if (profile.daily_points >= DAILY_POINTS_CAP) return;
-    
-    const pointsToAdd = Math.min(amount, DAILY_POINTS_CAP - profile.daily_points);
-    const newPoints = profile.points + pointsToAdd;
-    const newDailyPoints = profile.daily_points + pointsToAdd;
-    const newWeeklyPoints = profile.weekly_points + pointsToAdd;
+      if (!fetchError && profile) {
+        currentPoints = profile.points || 0;
+        currentDailyPoints = profile.daily_points || 0;
+        currentWeeklyPoints = profile.weekly_points || 0;
+      } else {
+        // Fallback to just points if columns missing
+        const { data: fallbackProfile } = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('id', user.id)
+          .single();
+        if (fallbackProfile) {
+          currentPoints = fallbackProfile.points || 0;
+        }
+      }
 
-    // Update local state
-    setPoints(newPoints);
-    setDailyPoints(newDailyPoints);
-    setWeeklyPoints(newWeeklyPoints);
+      // Total points should always increase by 'amount'
+      const newPoints = currentPoints + amount;
+      
+      // Calculate daily/weekly safely
+      let dailyPointsToAdd = amount;
+      if (currentDailyPoints < DAILY_POINTS_CAP) {
+        dailyPointsToAdd = Math.min(amount, DAILY_POINTS_CAP - currentDailyPoints);
+      } else {
+        dailyPointsToAdd = 0;
+      }
+      
+      const newDailyPoints = currentDailyPoints + dailyPointsToAdd;
+      const newWeeklyPoints = currentWeeklyPoints + dailyPointsToAdd;
 
-    const { error } = await supabase.from('profiles').update({
-      points: newPoints,
-      daily_points: newDailyPoints,
-      weekly_points: newWeeklyPoints
-    }).eq('id', user.id);
+      // Update local state
+      setPoints(newPoints);
+      setDailyPoints(newDailyPoints);
+      setWeeklyPoints(newWeeklyPoints);
 
-    if (error) {
-      console.error('Error updating points:', error);
-      // Revert if failed
-      setPoints(profile.points);
-      setDailyPoints(profile.daily_points);
-      setWeeklyPoints(profile.weekly_points);
+      const { error: updateError } = await supabase.from('profiles').update({
+        points: newPoints,
+        daily_points: newDailyPoints,
+        weekly_points: newWeeklyPoints
+      }).eq('id', user.id);
+
+      if (updateError) {
+        // Fallback update
+        await supabase.from('profiles').update({
+          points: newPoints
+        }).eq('id', user.id);
+      }
+    } catch (e) {
+      console.error('Error in addPoints:', e);
     }
   };
 
@@ -1265,89 +1297,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     isUpdatingProfileRef.current = true;
 
     try {
-      // Fetch current profile to get latest points and avoid race conditions
-      // Try fetching with all columns first
-      let profile;
-      let fetchError;
-      
-      const res = await supabase
-        .from('profiles')
-        .select('points, daily_points, weekly_points')
-        .eq('id', user.id)
-        .single();
-        
-      profile = res.data;
-      fetchError = res.error;
-
-      // If it fails, maybe the columns don't exist. Fallback to just points.
-      if (fetchError) {
-        console.warn('Failed to fetch daily/weekly points, falling back to just points:', fetchError);
-        const fallbackRes = await supabase
-          .from('profiles')
-          .select('points')
-          .eq('id', user.id)
-          .single();
-          
-        if (fallbackRes.error) throw fallbackRes.error;
-        profile = fallbackRes.data;
-      }
-
-      const currentPoints = profile?.points || 0;
-      const currentDailyPoints = profile?.daily_points || 0;
-      const currentWeeklyPoints = profile?.weekly_points || 0;
-
-      // Calculate points to add
-      const pointsToAdd = Math.min(10, DAILY_POINTS_CAP - currentDailyPoints);
-      const newPoints = currentPoints + pointsToAdd;
-      const newDailyPoints = currentDailyPoints + pointsToAdd;
-      const newWeeklyPoints = currentWeeklyPoints + pointsToAdd;
-
-      console.log('Updating micro-gesture status and points:', { pointsToAdd, newPoints });
-
-      // Try updating all fields
-      let updateError;
-      const updateRes = await supabase.from('profiles').update({
-        micro_gesture_completed: true,
-        points: newPoints,
-        daily_points: newDailyPoints,
-        weekly_points: newWeeklyPoints
+      // Try updating the completion status
+      const { error: updateError } = await supabase.from('profiles').update({
+        micro_gesture_completed: true
       }).eq('id', user.id);
       
-      updateError = updateRes.error;
-
-      // If update fails, fallback to just points and micro_gesture_completed
       if (updateError) {
-        console.warn('Failed to update all fields, falling back to basic fields:', updateError);
-        const fallbackUpdateRes = await supabase.from('profiles').update({
-          points: newPoints
-        }).eq('id', user.id);
-        
-        if (fallbackUpdateRes.error) {
-          console.error('Failed to update points:', fallbackUpdateRes.error);
-        } else {
-          // If we can't update micro_gesture_completed in DB, store in localStorage
-          const today = new Date().toISOString().split('T')[0];
-          localStorage.setItem(`micro_gesture_${user.id}_${today}`, 'true');
-        }
+        console.warn('Failed to update micro_gesture_completed:', updateError);
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem(`micro_gesture_${user.id}_${today}`, 'true');
       }
 
-      // Update local points state
-      setPoints(newPoints);
-      setDailyPoints(newDailyPoints);
-      setWeeklyPoints(newWeeklyPoints);
-
-      // Show points modal
-      if (pointsToAdd > 0) {
-        showPoints(pointsToAdd, 'Gesto do Dia Concluído!');
-      } else {
-        // Still show a success message even if points are capped
-        showPoints(0, 'Gesto do Dia Concluído! (Limite diário atingido)');
-      }
+      // Re-use addPoints logic
+      const pointsToAdd = 10;
+      await addPoints(pointsToAdd);
+      showPoints(pointsToAdd, 'Gesto do Dia Concluído!');
 
       // Record achievement
       await recordAchievement({
-        title: 'Gesto do Dia',
-        description: 'Você realizou o gesto do dia para o seu par.',
+        title: 'Presente no Agora',
+        description: 'Você concluiu o micro-gesto do dia.',
         points: pointsToAdd,
         icon: 'favorite',
         claimed: true

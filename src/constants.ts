@@ -65,9 +65,5 @@ export const PROGRAM_ICONS = {
  */
 export const HOME_TOOLS = [
   { to: "/agreements", icon: "handshake", label: "Combinados", color: "bg-primary/10 text-primary" },
-  { to: "/sos", icon: "emergency_home", label: "Central SOS", color: "bg-red-100 text-red-500" },
-  { to: "/exchanges", icon: "swap_horiz", label: "Permutas", color: "bg-peach-main/10 text-peach-main" },
-  { to: "/surprise", icon: "redeem", label: "Surpreenda", color: "bg-amber-100 text-amber-500" },
-  { to: "/empathy-box", icon: "mail", label: "Desculpas", color: "bg-pink-100 text-pink-500" },
-  { to: "/next-date", icon: "event_available", label: "Saia da Rotina", color: "bg-indigo-100 text-indigo-500" }
+  { to: "/exchanges", icon: "swap_horiz", label: "Permutas", color: "bg-peach-main/10 text-peach-main" }
 ];

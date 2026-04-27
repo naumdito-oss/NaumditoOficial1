@@ -102,6 +102,7 @@ export const notificationService = {
    */
   async checkAndGenerateEventNotifications(userId: string, coupleId: string) {
     try {
+      console.log('Checking notifications for user:', userId);
       // 1. Get user profile and couple data
       const { data: profile } = await supabase
         .from('profiles')
@@ -121,32 +122,48 @@ export const notificationService = {
 
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
-      const nextWeek = new Date();
-      nextWeek.setDate(today.getDate() + 7);
+      
+      console.log('Today:', todayStr);
 
       // 2. Check Anniversary
       if (profile.couples?.anniversary_date) {
-        const anniv = new Date(profile.couples.anniversary_date);
+        const anniv = new Date(profile.couples.anniversary_date + 'T12:00:00');
+        console.log('Anniversary date:', anniv.toISOString());
+        
         // Today
         if (anniv.getMonth() === today.getMonth() && anniv.getDate() === today.getDate()) {
           await this.ensureNotificationExists(userId, 'event', 'Feliz Aniversário de Namoro!', 'Hoje é o dia especial de vocês! Que tal celebrar?', 'celebration', 'bg-amber-100 text-amber-500', todayStr);
         }
-        // Upcoming (7 days)
-        if (anniv.getMonth() === nextWeek.getMonth() && anniv.getDate() === nextWeek.getDate()) {
-          await this.ensureNotificationExists(userId, 'event', 'Aniversário de Namoro chegando!', 'Em 7 dias vocês completam mais um ciclo juntos. Já pensou no presente?', 'notification_important', 'bg-amber-50 text-amber-400', todayStr);
+        // Upcoming (within 2 days)
+        const twoDaysFromNow = new Date();
+        twoDaysFromNow.setDate(today.getDate() + 2);
+        
+        // Check if the anniversary is between today and 2 days from now
+        const annivDate = new Date(today.getFullYear(), anniv.getMonth(), anniv.getDate());
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        if (annivDate > todayDate && annivDate <= twoDaysFromNow) {
+          await this.ensureNotificationExists(userId, 'event', 'Aniversário de Namoro chegando!', 'Em breve vocês completam mais um ciclo juntos. Já pensou no presente?', 'notification_important', 'bg-amber-50 text-amber-400', todayStr);
         }
       }
 
       // 3. Check Partner Birthday
       if (partner?.metadata?.birthDate) {
-        const bday = new Date(partner.metadata.birthDate);
+        const bday = new Date(partner.metadata.birthDate + 'T12:00:00');
         // Today
         if (bday.getMonth() === today.getMonth() && bday.getDate() === today.getDate()) {
           await this.ensureNotificationExists(userId, 'event', `Aniversário de ${partner.name}!`, `Hoje é o aniversário do seu amor! Não esqueça de dar os parabéns.`, 'cake', 'bg-pink-100 text-pink-500', todayStr);
         }
-        // Upcoming (7 days)
-        if (bday.getMonth() === nextWeek.getMonth() && bday.getDate() === nextWeek.getDate()) {
-          await this.ensureNotificationExists(userId, 'event', `Aniversário de ${partner.name} chegando!`, `Faltam 7 dias para o aniversário do seu amor. Tempo de preparar uma surpresa!`, 'alarm', 'bg-pink-50 text-pink-400', todayStr);
+        // Upcoming (within 2 days)
+        const twoDaysFromNow = new Date();
+        twoDaysFromNow.setDate(today.getDate() + 2);
+        
+        // Check if the birthday is between today and 2 days from now
+        const bdayDate = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        if (bdayDate > todayDate && bdayDate <= twoDaysFromNow) {
+          await this.ensureNotificationExists(userId, 'event', `Aniversário de ${partner.name} chegando!`, `Faltam poucos dias para o aniversário do seu amor. Tempo de preparar uma surpresa!`, 'alarm', 'bg-pink-50 text-pink-400', todayStr);
         }
       }
 
@@ -158,7 +175,7 @@ export const notificationService = {
 
       for (const specialDate of allSpecialDates) {
         if (specialDate.date && specialDate.label) {
-          const date = new Date(specialDate.date);
+          const date = new Date(specialDate.date + 'T12:00:00');
           // Today
           if (date.getMonth() === today.getMonth() && date.getDate() === today.getDate()) {
             await this.ensureNotificationExists(
@@ -171,13 +188,20 @@ export const notificationService = {
               todayStr
             );
           }
-          // Upcoming (7 days)
-          if (date.getMonth() === nextWeek.getMonth() && date.getDate() === nextWeek.getDate()) {
+          // Upcoming (within 2 days)
+          const twoDaysFromNow = new Date();
+          twoDaysFromNow.setDate(today.getDate() + 2);
+          
+          // Check if the special date is between today and 2 days from now
+          const dateDate = new Date(today.getFullYear(), date.getMonth(), date.getDate());
+          const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          
+          if (dateDate > todayDate && dateDate <= twoDaysFromNow) {
             await this.ensureNotificationExists(
               userId, 
               'event', 
               `${specialDate.label} chegando!`, 
-              `Em 7 dias teremos: ${specialDate.label}. Prepare-se para esse momento!`, 
+              `Em breve teremos: ${specialDate.label}. Prepare-se para esse momento!`, 
               'event_upcoming', 
               'bg-indigo-50 text-indigo-400', 
               todayStr
